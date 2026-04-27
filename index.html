@@ -198,6 +198,16 @@
     svg .wheel-ring { cursor: grab; }
     svg .wheel-ring:active { cursor: grabbing; }
 
+    /* Pointer bounce during spin */
+    .pointer-bounce {
+      animation: pointer-wiggle 0.15s ease-in-out infinite alternate;
+      transform-origin: center;
+    }
+    @keyframes pointer-wiggle {
+      0%   { transform: rotate(-3deg) translateY(0); }
+      100% { transform: rotate(3deg) translateY(1px); }
+    }
+
     /* ── Status indicators ── */
     .status-dot {
       display: inline-block; width: 8px; height: 8px;
@@ -765,16 +775,25 @@ function drawWheel() {
   svg.setAttribute("height", SIZE);
   svg.setAttribute("viewBox", `0 0 ${SIZE} ${SIZE}`);
 
-  const transition = isSpinning
-    ? 'transition:transform 2.5s cubic-bezier(.06,.82,.15,1)'
-    : '';
+  // Note: spin animation is handled by spinWheel() directly on DOM elements.
+  // drawWheel() always renders the static (final) state.
 
   let html = '';
 
   // ── Outer ring (archetypes) ──
-  html += `<g id="outer-ring" class="wheel-ring" style="transform:rotate(${outerAngle}deg); transform-origin:${CENTER}px ${CENTER}px; ${transition}">`;
+  html += `<g id="outer-ring" class="wheel-ring" style="transform:rotate(${outerAngle}deg); transform-origin:${CENTER}px ${CENTER}px;">`;
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="${OUTER_RADIUS}" fill="none" stroke="var(--border)" stroke-width="1.5"/>`;
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS + SIZE * 0.04}" fill="none" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,4"/>`;
+
+  // Segment divider lines (roulette-style ticks)
+  for (let i = 0; i < arcCount; i++) {
+    const divAngle = (i * ARC_SEGMENT - 90 - ARC_SEGMENT / 2) * Math.PI / 180;
+    const x1 = CENTER + (INNER_RADIUS + SIZE * 0.04) * Math.cos(divAngle);
+    const y1 = CENTER + (INNER_RADIUS + SIZE * 0.04) * Math.sin(divAngle);
+    const x2 = CENTER + OUTER_RADIUS * Math.cos(divAngle);
+    const y2 = CENTER + OUTER_RADIUS * Math.sin(divAngle);
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--border)" stroke-width="0.5" opacity="0.5"/>`;
+  }
 
   const arcFontSize = arcCount > 16 ? 14 : arcCount > 12 ? 17 : (SIZE >= 380 ? 24 : SIZE >= 340 ? 21 : 18);
 
@@ -782,15 +801,27 @@ function drawWheel() {
     const angle = (i * ARC_SEGMENT - 90) * Math.PI / 180;
     const radius = (OUTER_RADIUS + INNER_RADIUS + SIZE * 0.04) / 2;
     const x = CENTER + radius * Math.cos(angle);
-    const y = CENTER + radius * Math.sin(angle) + 5;
-    html += `<text x="${x}" y="${y}" text-anchor="middle" font-size="${arcFontSize}">${archetypes[i].symbol}</text>`;
+    const y = CENTER + radius * Math.sin(angle);
+    // Radial orientation: each item rotated so its bottom faces center
+    const radialDeg = i * ARC_SEGMENT;
+    html += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${arcFontSize}" transform="rotate(${radialDeg}, ${x}, ${y})">${archetypes[i].symbol}</text>`;
   }
   html += '</g>';
 
   // ── Inner ring (words) ──
-  html += `<g id="inner-ring" class="wheel-ring" style="transform:rotate(${innerAngle}deg); transform-origin:${CENTER}px ${CENTER}px; ${transition}">`;
+  html += `<g id="inner-ring" class="wheel-ring" style="transform:rotate(${innerAngle}deg); transform-origin:${CENTER}px ${CENTER}px;">`;
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS}" fill="var(--bg)" stroke="var(--border)" stroke-width="1.5"/>`;
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="${CENTER_RADIUS}" fill="var(--card)" stroke="var(--border)" stroke-width=".5"/>`;
+
+  // Inner ring segment dividers
+  for (let i = 0; i < wordCount; i++) {
+    const divAngle = (i * WORD_SEGMENT - 90 - WORD_SEGMENT / 2) * Math.PI / 180;
+    const x1 = CENTER + CENTER_RADIUS * Math.cos(divAngle);
+    const y1 = CENTER + CENTER_RADIUS * Math.sin(divAngle);
+    const x2 = CENTER + INNER_RADIUS * Math.cos(divAngle);
+    const y2 = CENTER + INNER_RADIUS * Math.sin(divAngle);
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--border)" stroke-width="0.3" opacity="0.4"/>`;
+  }
 
   const maxLabelLength = wordCount > 16 ? 4 : wordCount > 10 ? 6 : wordCount > 6 ? 8 : 12;
   const wordFontSize = SIZE >= 380
@@ -811,15 +842,18 @@ function drawWheel() {
     const sourceLabel = word.source.length > maxLabelLength ? word.source.slice(0, maxLabelLength - 1) + '…' : word.source;
     const targetLabel = word.target.length > maxLabelLength ? word.target.slice(0, maxLabelLength - 1) + '…' : word.target;
 
-    html += `<text x="${x}" y="${y - 3}" text-anchor="middle" font-size="${wordFontSize}" fill="${color}" class="tibetan-font">${sourceLabel}</text>`;
-    html += `<text x="${x}" y="${y + wordFontSize - 1}" text-anchor="middle" font-size="${Math.max(7, wordFontSize - 4)}" fill="var(--faint)" font-family="DM Sans,sans-serif">${targetLabel}</text>`;
+    // Radial orientation: bottom faces center, like roulette
+    const radialDeg = i * WORD_SEGMENT;
+    const radialTransform = `transform="rotate(${radialDeg}, ${x}, ${y})"`;
+    html += `<text x="${x}" y="${y - 3}" text-anchor="middle" font-size="${wordFontSize}" fill="${color}" class="tibetan-font" ${radialTransform}>${sourceLabel}</text>`;
+    html += `<text x="${x}" y="${y + wordFontSize - 1}" text-anchor="middle" font-size="${Math.max(7, wordFontSize - 4)}" fill="var(--faint)" font-family="DM Sans,sans-serif" ${radialTransform}>${targetLabel}</text>`;
   });
   html += '</g>';
 
   // ── Center dot and pointer ──
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="5" fill="var(--accent)" opacity=".4"/>`;
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="2" fill="var(--card)"/>`;
-  html += `<polygon points="${CENTER},${CENTER - OUTER_RADIUS - 7} ${CENTER - 5},${CENTER - OUTER_RADIUS + 5} ${CENTER + 5},${CENTER - OUTER_RADIUS + 5}" fill="var(--coral)" opacity=".75"/>`;
+  html += `<polygon id="wheel-pointer" points="${CENTER},${CENTER - OUTER_RADIUS - 7} ${CENTER - 5},${CENTER - OUTER_RADIUS + 5} ${CENTER + 5},${CENTER - OUTER_RADIUS + 5}" fill="var(--coral)" opacity=".75"/>`;
 
   svg.innerHTML = html;
   setupWheelDrag();
@@ -833,7 +867,7 @@ function getSelectedIndex(angle, segmentCount) {
 function spinWheel() {
   if (isSpinning || !getActiveWords().length) return;
 
-  loadWheelWords();
+  loadWheelWords(); // Draws wheel at CURRENT angles (starting position)
   isSpinning = true;
 
   const button = document.getElementById("spin-button");
@@ -841,16 +875,43 @@ function spinWheel() {
   button.textContent = "…";
   document.getElementById("wheel-result").style.display = "none";
 
-  outerAngle += Math.random() * 900 + 500;
-  innerAngle -= Math.random() * 900 + 500;
-  drawWheel();
+  // Calculate target angles
+  const targetOuter = outerAngle + Math.random() * 1400 + 720;
+  const targetInner = innerAngle - (Math.random() * 1400 + 720);
+
+  // Get the ring elements that drawWheel() just created
+  const outerRing = document.getElementById("outer-ring");
+  const innerRing = document.getElementById("inner-ring");
+  const CENTER = getWheelSize() / 2;
+  const transitionCSS = 'transform 4s cubic-bezier(.12,.75,.08,1)';
+
+  // Force browser to register the current position before animating
+  outerRing.getBoundingClientRect();
+
+  // Add transition and animate to target
+  outerRing.style.transition = transitionCSS;
+  innerRing.style.transition = transitionCSS;
+  outerRing.style.transform = `rotate(${targetOuter}deg)`;
+  outerRing.style.transformOrigin = `${CENTER}px ${CENTER}px`;
+  innerRing.style.transform = `rotate(${targetInner}deg)`;
+  innerRing.style.transformOrigin = `${CENTER}px ${CENTER}px`;
+
+  // Add bounce class to pointer
+  document.getElementById("wheel-pointer")?.classList.add("pointer-bounce");
+
+  // Update stored angles to final values
+  outerAngle = targetOuter;
+  innerAngle = targetInner;
 
   setTimeout(() => {
     isSpinning = false;
     button.disabled = false;
     button.textContent = "Крутити";
+    document.getElementById("wheel-pointer")?.classList.remove("pointer-bounce");
+    // Redraw at final position (applies counter-rotations for horizontal text)
+    drawWheel();
     showWheelResult();
-  }, 2600);
+  }, 4200);
 }
 
 function showWheelResult() {
