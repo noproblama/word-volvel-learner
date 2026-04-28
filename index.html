@@ -300,6 +300,42 @@
     }
     .test-filter-btn:disabled { opacity: .35; pointer-events: none; }
 
+    /* ── Language toggle (top-right) ── */
+    .lang-toggle {
+      position: fixed; top: 12px; right: 12px; z-index: 100;
+      display: flex; border: 1.5px solid var(--border);
+      border-radius: 6px; overflow: hidden;
+      background: var(--card); box-shadow: var(--shadow);
+    }
+    .lang-btn {
+      padding: 5px 10px; font-family: 'DM Sans', sans-serif;
+      font-size: 11px; font-weight: 500; border: 0;
+      background: transparent; color: var(--dim);
+      cursor: pointer; transition: .15s;
+    }
+    .lang-btn:hover { color: var(--text); background: var(--bg2); }
+    .lang-btn.active { color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+    .lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+
+    /* ── Help content ── */
+    .help-section { margin-bottom: 20px; }
+    .help-section h3 {
+      font-size: 14px; font-weight: 600; color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .help-section p, .help-section li {
+      font-size: 13px; color: var(--text); line-height: 1.6;
+    }
+    .help-section ol { padding-left: 20px; margin-top: 4px; }
+    .help-section li { margin-bottom: 4px; }
+    .help-example {
+      margin: 8px 0; padding: 10px 14px;
+      background: var(--bg); border-radius: 6px;
+      border: 1px solid var(--border); font-size: 12.5px;
+      line-height: 1.6; color: var(--dim);
+    }
+    .help-example b { color: var(--text); }
+
     /* ── Desktop ── */
     @media (min-width: 700px) {
       body { padding: 28px 20px; font-size: 15px; }
@@ -324,8 +360,13 @@
 </head>
 <body>
 
-  <h1>Вольвель Бруно</h1>
+  <h1 id="app-title">Вольвель Бруно</h1>
   <p class="subtitle" id="stats-line">—</p>
+
+  <div class="lang-toggle" id="lang-toggle">
+    <button class="lang-btn" data-lang="uk" onclick="switchLanguage('uk')">🇺🇦 UA</button>
+    <button class="lang-btn" data-lang="en" onclick="switchLanguage('en')">🇬🇧 EN</button>
+  </div>
 
   <div class="nav" id="main-nav">
     <button class="active" data-screen="wheel">Колесо</button>
@@ -333,15 +374,16 @@
     <button data-screen="import">Імпорт</button>
     <button data-screen="test">Тест</button>
     <button data-screen="memory">Пам'ять</button>
+    <button data-screen="help">?</button>
   </div>
 
   <!-- ════════════════ WHEEL SCREEN ════════════════ -->
   <div class="screen visible" id="screen-wheel">
     <div id="wheel-empty" class="card text-center" style="display:none">
-      <p style="color:var(--dim)" class="mb-16">Імпортуй словник або додай слова.</p>
+      <p style="color:var(--dim)" class="mb-16" id="wheel-empty-text">Імпортуй словник або додай слова.</p>
       <div class="flex-row" style="justify-content:center">
-        <button class="btn btn-small btn-primary" onclick="navigateTo('import')">Імпорт</button>
-        <button class="btn btn-small" onclick="navigateTo('words')">Додати</button>
+        <button class="btn btn-small btn-primary" onclick="navigateTo('import')" id="wheel-empty-import">Імпорт</button>
+        <button class="btn btn-small" onclick="navigateTo('words')" id="wheel-empty-add">Додати</button>
       </div>
     </div>
 
@@ -364,24 +406,24 @@
       <!-- Settings panel -->
       <div id="settings-panel" style="display:none; max-width:520px; width:100%" class="mt-10">
         <div class="card">
-          <div class="label">Налаштування колеса</div>
+          <div class="label" id="settings-title">Налаштування колеса</div>
           <div class="flex-row mb-12" style="gap:16px">
             <div class="settings-row">
-              <span>Образів:</span>
+              <span id="settings-arcs-label">Образів:</span>
               <select id="select-archetype-count" onchange="applySegmentSettings()"></select>
             </div>
             <div class="settings-row">
-              <span>Слів:</span>
+              <span id="settings-words-label">Слів:</span>
               <select id="select-word-count" onchange="applySegmentSettings()"></select>
             </div>
           </div>
-          <div class="label mt-12">Образи зовнішнього кола</div>
-          <p class="hint mb-10">Натисни на образ, щоб змінити.</p>
+          <div class="label mt-12" id="settings-images-title">Образи зовнішнього кола</div>
+          <p class="hint mb-10" id="settings-images-hint">Натисни на образ, щоб змінити.</p>
           <div class="archetype-grid" id="archetype-grid"></div>
           <div id="archetype-edit-area"></div>
           <div class="flex-row mt-10">
-            <button class="btn btn-small" onclick="addArchetype()">+ Образ</button>
-            <button class="btn btn-small" onclick="resetArchetypes()">Стандартні</button>
+            <button class="btn btn-small" onclick="addArchetype()" id="settings-add-image">+ Образ</button>
+            <button class="btn btn-small" onclick="resetArchetypes()" id="settings-reset">Стандартні</button>
           </div>
         </div>
       </div>
@@ -393,10 +435,10 @@
   <!-- ════════════════ WORDS SCREEN ════════════════ -->
   <div class="screen" id="screen-words">
     <div class="card mb-16">
-      <div class="label">Додати слово</div>
+      <div class="label" id="words-add-title">Додати слово</div>
       <div class="flex-row mb-8">
-        <input type="text" class="flex-grow" placeholder="Слово" id="input-word-source">
         <input type="text" class="flex-grow" placeholder="Переклад" id="input-word-target">
+        <input type="text" class="flex-grow" placeholder="Слово" id="input-word-source">
       </div>
       <div class="flex-row" style="align-items:center">
         <input type="text" style="flex:1" placeholder="Категорія" id="input-word-category">
@@ -418,17 +460,18 @@
   <!-- ════════════════ IMPORT SCREEN ════════════════ -->
   <div class="screen" id="screen-import">
     <div class="card mb-16">
-      <div class="label">Імпорт слів</div>
-      <p class="hint mb-10">«● слово — переклад» по рядку. «1. Назва» → категорія.</p>
+      <div class="label" id="import-title">Імпорт слів</div>
+      <p class="hint mb-10" id="import-hint">«● слово — переклад» по рядку. «1. Назва» → категорія.</p>
       <textarea class="import-textarea" id="import-textarea"
                 placeholder="1. Питальні слова&#10;● སུ་ — Хто&#10;● ག་རེ་ — Що"
                 oninput="previewImport()"></textarea>
+      <div id="import-enter-hint" class="hint mt-8" style="text-align:center; color:var(--faint)">Введіть хоча б одну пару слово — переклад</div>
       <div id="import-preview"></div>
     </div>
 
     <div class="card">
-      <div class="label">Синхронізація</div>
-      <p class="hint mb-10">Експорт/імпорт усіх даних між пристроями.</p>
+      <div class="label" id="sync-title">Синхронізація</div>
+      <p class="hint mb-10" id="sync-hint">Експорт/імпорт усіх даних між пристроями.</p>
       <div class="flex-row">
         <button class="btn btn-small" onclick="exportAsJSON()">↓ .json</button>
         <button class="btn btn-small btn-warm" onclick="document.getElementById('json-file-input').click()">↑ .json</button>
@@ -445,8 +488,8 @@
   <!-- ════════════════ MEMORY SCREEN ════════════════ -->
   <div class="screen" id="screen-memory">
     <div class="card mb-16">
-      <div class="label">Менеджер пам'яті</div>
-      <p class="hint mb-12">Увімкнене = вивчене. ✎ — редагувати мнемоніку.</p>
+      <div class="label" id="memory-title">Менеджер пам'яті</div>
+      <p class="hint mb-12" id="memory-hint">Увімкнене = вивчене. ✎ — редагувати мнемоніку.</p>
       <div class="flex-row mb-12" style="align-items:center">
         <select id="memory-category-filter"></select>
         <input type="text" style="flex:1; min-width:70px" placeholder="Пошук…"
@@ -455,6 +498,11 @@
       <div id="memory-list-container" style="max-height:500px; overflow-y:auto"></div>
     </div>
     <div class="counter" id="memory-counter"></div>
+  </div>
+
+  <!-- ════════════════ HELP SCREEN ════════════════ -->
+  <div class="screen" id="screen-help">
+    <div class="card" id="help-content"></div>
   </div>
 
 
@@ -477,6 +525,303 @@ const CATEGORY_COLORS = [
   '#8a7cc9', '#2a9e8e', '#b8922e', '#b85b5b', '#7ab85b',
   '#c9708a', '#5bb8a0',
 ];
+
+/* ══════════════════════════════════════════════════
+   INTERNATIONALIZATION (i18n)
+   ══════════════════════════════════════════════════ */
+
+let currentLang = localStorage.getItem("bruno-lang") || "en";
+
+const TRANSLATIONS = {
+  uk: {
+    title: "Вольвель Бруно",
+    // Nav
+    navWheel: "Колесо", navWords: "Слова", navImport: "Імпорт",
+    navTest: "Тест", navMemory: "Пам'ять",
+    // Stats line
+    statsWords: "слів", statsLearned: "вивчено", statsMnemonics: "мнемонік",
+    // Wheel
+    wheelEmpty: "Імпортуй словник або додай слова.",
+    wheelImport: "Імпорт", wheelAdd: "Додати",
+    wheelSpin: "Крутити", wheelSpinning: "…",
+    legendNew: "нове", legendLearning: "вчу", legendKnown: "знаю",
+    // Wheel result
+    wheelImagine: "Уяви", wheelWith: "разом із",
+    wheelSave: "Зберегти", wheelUpdate: "Оновити",
+    wheelKnow: "✓ Знаю", wheelLearned: "Вивчене!",
+    wheelLearnedHint: "Повернути — «Пам'ять».",
+    mnemonicPlaceholder: "Твоя мнемоніка…",
+    // Settings
+    settingsTitle: "Налаштування колеса",
+    settingsArcs: "Образів:", settingsWords: "Слів:",
+    settingsImagesTitle: "Образи зовнішнього кола",
+    settingsImagesHint: "Натисни на образ, щоб змінити.",
+    settingsAddImage: "+ Образ", settingsReset: "Стандартні",
+    settingsEmoji: "Емоджі", settingsName: "Назва",
+    settingsDelete: "Видалити",
+    // Words
+    wordsAddTitle: "Додати слово",
+    wordsTranslation: "Переклад", wordsWord: "Слово",
+    wordsCategory: "Категорія", wordsSearch: "Пошук…",
+    wordsEmpty: "Порожній", wordsNotFound: "Не знайдено",
+    wordsOf: "з",
+    // Import
+    importTitle: "Імпорт слів",
+    importHint: "Рядок у форматі \"1. Ім'я\" створює категорію для наступних після неї слів (до наступної категорії). Рядок у форматі \"слово — переклад\" додає пару слів для практики",
+    importPlaceholder: "1. Питальні слова \nསུ་ — Хто \nག་རེ་ — Що",
+    importFound: "Знайдено:", importPairs: "пар",
+    importButton: "Імпортувати",
+    importMore: "…і ще",
+    syncTitle: "Синхронізація",
+    syncHint: "Експорт/імпорт усіх даних між пристроями.",
+    // Test
+    testTitle: "Що тестувати?",
+    testAll: "Усі слова", testWithMnemonics: "✦ З мнемоніками",
+    testByCategory: "За категорією:",
+    testAllLearned: "Усі вивчені! 🎉", testNoWords: "Немає слів.",
+    testShow: "Показати", testRemembered: "Пам'ятав(ла)?",
+    testYes: "Так ✓", testNo: "Ні ✗", testKnowForever: "✓✓ Знаю",
+    testResult: "Результат", testAgain: "Ще раз",
+    testOtherTest: "Інший тест",
+    // Memory
+    memoryTitle: "Менеджер пам'яті",
+    memoryHint: "Увімкнене = вивчене. ✎ — редагувати мнемоніку.",
+    memoryLearned: "вивчено з",
+    memoryAddMnemonic: "+ мнемоніка",
+    memoryNoWords: "Немає слів",
+    // Common
+    allCategories: "Усі категорії", save: "Зберегти", cancel: "✕",
+    delete: "Видалити",
+    navHelp: "?",
+    importEnterHint: "Введіть хоча б одну пару \"слово — переклад\"",
+    helpContent: `
+      <div class="help-section">
+        <h3>🎯 Що це?</h3>
+        <p>Тренажер для запам'ятовування слів за методом Джордано Бруно. Колесо створює випадкові пари «яскравий образ + слово», а ви придумуєте абсурдну історію, яка зв'яжє їх у пам'яті.</p>
+      </div>
+      <div class="help-section">
+        <h3>📝 Як почати</h3>
+        <ol>
+          <li>Додайте слова по одному у вкладці <b>Слова</b>, або ж відкрийте <b>Імпорт</b> і вставте цілий список слів у форматі «слово — переклад» (для зручності вивчання перед списком однотипних слів додайте назву категорії слів - напр. «1. Фрукти», а далі пари «слово — переклад» з нового рядка). Категорій та слів у кожній категорії може бути скільки завгодно.</li>
+          <li>Перейдіть на <b>Колесо</b> і натисніть <b>Крутити</b></li>
+          <li>Побачите пару: образ (напр. 🐉 Дракон) + слово</li>
+          <li>Придумайте абсурдну сцену і запишіть її як мнемоніку</li>
+        </ol>
+      </div>
+      <div class="help-section">
+        <h3>💡 Приклад мнемоніки</h3>
+        <div class="help-example">
+          🦅 Орел + <b>མིད་པ (горло)</b><br>
+          → «Орел на ГОРЛО МІкрофон ПАвлу дає»<br>
+        </div>
+        Чим абсурдніше — тим краще запам'ятовується!
+      </div>
+      <div class="help-section">
+        <h3>🧪 Перевірка</h3>
+        <p>Відкрийте <b>Тест</b>. Оберіть «З мнемоніками» — тестуватимуться лише слова, до яких ви вже створили асоціації. Якщо слово згадується легко — натисніть «✓✓ Знаю», і воно зникне з тренувань.</p>
+      </div>
+      <div class="help-section">
+        <h3>🧠 Поради</h3>
+        <ol>
+          <li><b>Чужі мнемоніки не працюють.</b> Тільки ваші власні абсурдні образи чіпляються за пам'ять</li>
+          <li><b>Спершу корені, потім фрази.</b> Вчіть короткі базові слова — довгі складені будуть зрозумілі автоматично</li>
+          <li><b>Мнемоніка — риштування.</b> З часом ви забудете історію, але слово залишиться. Це нормально і навіть мета</li>
+        </ol>
+      </div>
+      <div class="help-section">
+        <h3>⚙ Образи на колесі</h3>
+        <p>Натисніть ⚙ біля кнопки «Крутити», щоб змінити емоджі та назви образів на свої. Особисті образи працюють краще за стандартні.</p>
+      </div>`,
+  },
+
+  en: {
+    title: "Bruno's Volvelle",
+    navWheel: "Wheel", navWords: "Words", navImport: "Import",
+    navTest: "Test", navMemory: "Memory",
+    statsWords: "words", statsLearned: "learned", statsMnemonics: "mnemonics",
+    wheelEmpty: "Import a dictionary or add words.",
+    wheelImport: "Import", wheelAdd: "Add",
+    wheelSpin: "Spin", wheelSpinning: "…",
+    legendNew: "new", legendLearning: "learning", legendKnown: "known",
+    wheelImagine: "Imagine", wheelWith: "together with",
+    wheelSave: "Save", wheelUpdate: "Update",
+    wheelKnow: "✓ Know", wheelLearned: "Learned!",
+    wheelLearnedHint: "Undo in «Memory».",
+    mnemonicPlaceholder: "Your mnemonic…",
+    settingsTitle: "Wheel settings",
+    settingsArcs: "Images:", settingsWords: "Words:",
+    settingsImagesTitle: "Outer ring images",
+    settingsImagesHint: "Tap an image to edit.",
+    settingsAddImage: "+ Image", settingsReset: "Defaults",
+    settingsEmoji: "Emoji", settingsName: "Name",
+    settingsDelete: "Delete",
+    wordsAddTitle: "Add word",
+    wordsTranslation: "Translation", wordsWord: "Word",
+    wordsCategory: "Category", wordsSearch: "Search…",
+    wordsEmpty: "Empty", wordsNotFound: "Not found",
+    wordsOf: "of",
+    importTitle: "Import words",
+    importHint: "A line in the format \"1. Name\" creates a category for the following after it words (until next category). A line in the format \"word — translation\" adds a pair of words for practice",
+    importPlaceholder: "1. Question words \nསུ་ — who \nག་རེ་ — what",
+    importFound: "Found:", importPairs: "pairs",
+    importButton: "Import",
+    importMore: "…and more",
+    syncTitle: "Sync",
+    syncHint: "Export/import all data between devices.",
+    testTitle: "What to test?",
+    testAll: "All words", testWithMnemonics: "✦ With mnemonics",
+    testByCategory: "By category:",
+    testAllLearned: "All learned! 🎉", testNoWords: "No words.",
+    testShow: "Reveal", testRemembered: "Did you remember?",
+    testYes: "Yes ✓", testNo: "No ✗", testKnowForever: "✓✓ Know it",
+    testResult: "Result", testAgain: "Again",
+    testOtherTest: "Other test",
+    memoryTitle: "Memory manager",
+    memoryHint: "On = learned. ✎ — edit mnemonic.",
+    memoryLearned: "learned of",
+    memoryAddMnemonic: "+ mnemonic",
+    memoryNoWords: "No words",
+    allCategories: "All categories", save: "Save", cancel: "✕",
+    delete: "Delete",
+    navHelp: "?",
+    importEnterHint: "Enter at least one \"word — translation\" pair",
+    helpContent: `
+      <div class="help-section">
+        <h3>🎯 What is this?</h3>
+        <p>A vocabulary trainer based on Giordano Bruno's memory wheel method. The wheel creates random pairs of "vivid image + word", and you invent an absurd story to link them in your memory.</p>
+      </div>
+      <div class="help-section">
+        <h3>📝 Getting started</h3>
+        <ol>
+          <li>Add words one by one in the <b>Words</b> tab, or open <b>Import</b> and insert an entire list of words in the "word - translation" format (for ease of learning, add the name of the word category before the list of similar words - e.g. "1. Fruits", and then the "word - translation" pairs on a new line). There can be as many categories and words in each category as you like.</li>
+          <li>Switch to <b>Wheel</b> and press <b>Spin</b></li>
+          <li>You'll see a pair: image (e.g. 🐉 Dragon) + word</li>
+          <li>Invent an absurd scene and write it down as your mnemonic</li>
+        </ol>
+      </div>
+      <div class="help-section">
+        <h3>💡 Mnemonic example</h3>
+        <div class="help-example">
+          🦅 Eagle + <b>མིད་པ (throat)</b><br>
+          → "The eagle organized a MIni PArty of the THROAT."<br>
+        </div>
+        The more absurd — the better it sticks!
+      </div>
+      <div class="help-section">
+        <h3>🧪 Testing</h3>
+        <p>Open <b>Test</b>. Choose "With mnemonics" — only words you've already created associations for will be tested. If a word comes easily, press "✓✓ Know it" to remove it from training.</p>
+      </div>
+      <div class="help-section">
+        <h3>🧠 Tips</h3>
+        <ol>
+          <li><b>Other people's mnemonics don't work.</b> Only your own absurd images stick in memory</li>
+          <li><b>Roots first, phrases later.</b> Learn short base words — long compounds will become transparent on their own</li>
+          <li><b>Mnemonics are scaffolding.</b> Over time you'll forget the story but keep the word. This is normal and actually the goal</li>
+        </ol>
+      </div>
+      <div class="help-section">
+        <h3>⚙ Wheel images</h3>
+        <p>Press ⚙ next to the "Spin" button to customize the emoji and names. Personal images work better than defaults.</p>
+      </div>`,
+  },
+};
+
+function t(key) {
+  return TRANSLATIONS[currentLang]?.[key] || TRANSLATIONS.uk[key] || key;
+}
+
+function switchLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem("bruno-lang", lang);
+  // Update toggle button states
+  document.querySelectorAll(".lang-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.lang === lang);
+  });
+  applyTranslations();
+}
+
+function applyTranslations() {
+  // Title
+  document.getElementById("app-title").textContent = t("title");
+
+  // Nav buttons
+  const navKeys = ["navWheel", "navWords", "navImport", "navTest", "navMemory", "navHelp"];
+  document.querySelectorAll("#main-nav button").forEach((btn, i) => {
+    if (navKeys[i]) btn.textContent = t(navKeys[i]);
+  });
+
+  // Legend
+  document.querySelectorAll(".legend-item").forEach((el, i) => {
+    const keys = ["legendNew", "legendLearning", "legendKnown"];
+    const span = el.childNodes[1];
+    if (span) span.textContent = t(keys[i]);
+  });
+
+  // Static labels
+  const staticMap = {
+    "wheel-empty-text": "wheelEmpty",
+    "wheel-empty-import": "wheelImport",
+    "wheel-empty-add": "wheelAdd",
+    "settings-title": "settingsTitle",
+    "settings-arcs-label": "settingsArcs",
+    "settings-words-label": "settingsWords",
+    "settings-images-title": "settingsImagesTitle",
+    "settings-images-hint": "settingsImagesHint",
+    "settings-add-image": "settingsAddImage",
+    "settings-reset": "settingsReset",
+    "words-add-title": "wordsAddTitle",
+    "import-title": "importTitle",
+    "import-hint": "importHint",
+    "import-textarea": "importPlaceholder",
+    "sync-title": "syncTitle",
+    "sync-hint": "syncHint",
+    "memory-title": "memoryTitle",
+    "memory-hint": "memoryHint",
+  };
+  for (const [id, key] of Object.entries(staticMap)) {
+    const el = document.getElementById(id);
+    if (el) {
+      if (el.placeholder) {
+        el.placeholder = t(key);
+      } else {
+        el.textContent = t(key);
+      }
+    }
+  }
+
+  // Placeholders
+  const phMap = {
+    "input-word-target": "wordsTranslation",
+    "input-word-source": "wordsWord",
+    "input-word-category": "wordsCategory",
+    "words-search": "wordsSearch",
+    "memory-search": "wordsSearch",
+  };
+  for (const [id, key] of Object.entries(phMap)) {
+    const el = document.getElementById(id);
+    if (el) el.placeholder = t(key);
+  }
+
+  // Spin button (only when not spinning)
+  if (!isSpinning) {
+    document.getElementById("spin-button").textContent = t("wheelSpin");
+  }
+
+  // Re-render dynamic content
+  updateStatsLine();
+  if (currentScreen === "words") renderWordList();
+  if (currentScreen === "memory") renderMemoryList();
+  if (currentScreen === "test") showTestSetup();
+  if (currentScreen === "help") renderHelp();
+
+  // Update import hint
+  const importHintEl = document.getElementById("import-enter-hint");
+  if (importHintEl) importHintEl.textContent = t("importEnterHint");
+}
+
+function renderHelp() {
+  document.getElementById("help-content").innerHTML = t("helpContent");
+}
 
 /**
  * Main data store. Saved to localStorage.
@@ -575,7 +920,7 @@ function saveData() {
 function updateStatsLine() {
   const mnemonicCount = Object.keys(appData.mnemonics).length;
   document.getElementById("stats-line").textContent =
-    `${appData.words.length} слів · ${appData.memorized.length} вивчено · ${mnemonicCount} мнемонік`;
+    `${appData.words.length} ${t("statsWords")} · ${appData.memorized.length} ${t("statsLearned")} · ${mnemonicCount} ${t("statsMnemonics")}`;
 }
 
 
@@ -652,7 +997,7 @@ function fillCategorySelect(selectId) {
 
   const allOption = document.createElement('option');
   allOption.value = '__all__';
-  allOption.textContent = 'Усі категорії';
+  allOption.textContent = t('allCategories');
   select.appendChild(allOption);
 
   categories.forEach(cat => {
@@ -714,6 +1059,9 @@ function navigateTo(screenName) {
   if (screenName === "memory") {
     fillCategorySelect("memory-category-filter");
     renderMemoryList();
+  }
+  if (screenName === "help") {
+    renderHelp();
   }
 }
 
@@ -940,7 +1288,7 @@ function showWheelResult() {
     html += `<span class="category-tag" style="background:${catColor}15; color:${catColor}; border:1px solid ${catColor}25">${word.category}</span>`;
   }
   html += '</div>';
-  html += `<p class="hint mt-6">Уяви <b>${archetype.symbol} ${escapeHTML(archetype.name)}</b> разом із «<b>${escapeHTML(word.target)}</b>».</p>`;
+  html += `<p class="hint mt-6">${t("wheelImagine")} <b>${archetype.symbol} ${escapeHTML(archetype.name)}</b> ${t("wheelWith")} «<b>${escapeHTML(word.target)}</b>».</p>`;
 
   // Existing mnemonic (view + edit)
   if (mnemonic) {
@@ -960,17 +1308,17 @@ function showWheelResult() {
     html += `<div id="mnemonic-editor" style="display:none" class="mt-8">
       <textarea id="mnemonic-edit-textarea" style="min-height:48px">${escapeHTML(mnemonic.text)}</textarea>
       <div class="flex-row mt-8">
-        <button class="btn btn-small btn-primary" onclick="saveEditedMnemonic('${wordId}')">Зберегти</button>
-        <button class="btn btn-small" onclick="hideMnemonicEdit()">✕</button>
+        <button class="btn btn-small btn-primary" onclick="saveEditedMnemonic('${wordId}')">${t("save")}</button>
+        <button class="btn btn-small" onclick="hideMnemonicEdit()">${t("cancel")}</button>
       </div>
     </div>`;
   }
 
   // New mnemonic input
-  html += '<textarea class="mt-10" id="new-mnemonic-input" placeholder="Твоя мнемоніка…"></textarea>';
+  html += `<textarea class="mt-10" id="new-mnemonic-input" placeholder="${t("mnemonicPlaceholder")}"></textarea>`;
   html += `<div class="flex-row mt-8" style="justify-content:space-between">
-    <button class="btn btn-small btn-primary" onclick="saveNewMnemonic('${wordId}', '${escapeHTML(archetype.symbol)}', '${escapeHTML(archetype.name)}')">${mnemonic ? "Оновити" : "Зберегти"} ↵</button>
-    <button class="btn btn-small btn-success" onclick="markAsMemorized('${wordId}')">✓ Знаю</button>
+    <button class="btn btn-small btn-primary" onclick="saveNewMnemonic('${wordId}', '${escapeHTML(archetype.symbol)}', '${escapeHTML(archetype.name)}')">${mnemonic ? t("wheelUpdate") : t("wheelSave")} ↵</button>
+    <button class="btn btn-small btn-success" onclick="markAsMemorized('${wordId}')">${t("wheelKnow")}</button>
   </div></div>`;
 
   const resultEl = document.getElementById("wheel-result");
@@ -1035,8 +1383,8 @@ function markAsMemorized(wordId) {
   document.getElementById("wheel-result").innerHTML = `
     <div class="card text-center">
       <div style="font-size:32px; margin-bottom:8px; color:var(--color-solid)">✦</div>
-      <p style="color:var(--color-solid); font-weight:600">Вивчене!</p>
-      <p class="hint mt-8">Повернути — «Пам'ять».</p>
+      <p style="color:var(--color-solid); font-weight:600">${t("wheelLearned")}</p>
+      <p class="hint mt-8">${t("wheelLearnedHint")}</p>
     </div>`;
   loadWheelWords();
   checkWheelEmpty();
@@ -1169,18 +1517,18 @@ function renderArchetypeGrid() {
     panel.innerHTML = `<div class="archetype-edit-panel">
       <div class="flex-row mb-8">
         <div style="flex:1">
-          <div class="hint mb-6">Емоджі</div>
+          <div class="hint mb-6">${t("settingsEmoji")}</div>
           <input type="text" id="edit-archetype-symbol" value="${escapeHTML(arch.symbol)}" style="font-size:18px; text-align:center" maxlength="4">
         </div>
         <div style="flex:2">
-          <div class="hint mb-6">Назва</div>
+          <div class="hint mb-6">${t("settingsName")}</div>
           <input type="text" id="edit-archetype-name" value="${escapeHTML(arch.name)}">
         </div>
       </div>
       <div class="flex-row">
         <button class="btn btn-small btn-primary" onclick="saveArchetype(${editingArchetypeIndex})">✓</button>
         <button class="btn btn-small" onclick="editingArchetypeIndex = -1; renderArchetypeGrid()">✕</button>
-        ${archetypes.length > 4 ? `<button class="btn btn-small btn-danger" onclick="removeArchetype(${editingArchetypeIndex})">Видалити</button>` : ''}
+        ${archetypes.length > 4 ? `<button class="btn btn-small btn-danger" onclick="removeArchetype(${editingArchetypeIndex})">${t("settingsDelete")}</button>` : ''}
       </div>
     </div>`;
   } else {
@@ -1268,7 +1616,7 @@ function parseImportText(text) {
 
     // Remove bullet points
     const cleaned = line.replace(/^[●•\-\*◦▪]\s*/, "");
-    const parts = cleaned.split(/\s*[—–]\s*/);
+    const parts = cleaned.split(/\s*[—–]\s*|\s+-\s+/);
 
     if (parts.length >= 2) {
       const source = parts[0].trim();
@@ -1291,8 +1639,12 @@ function previewImport() {
   importPreviewData = parseImportText(document.getElementById("import-textarea").value);
   let html = "";
 
+  const hintEl = document.getElementById("import-enter-hint");
+  const hasInput = document.getElementById("import-textarea").value.trim().length > 0;
+
   if (importPreviewData.length) {
-    html += `<div class="mt-12" style="font-size:12px; color:var(--dim)">Знайдено: <b style="color:var(--accent)">${importPreviewData.length}</b> пар</div>`;
+    if (hintEl) hintEl.style.display = "none";
+    html += `<div class="mt-12" style="font-size:12px; color:var(--dim)">${t("importFound")} <b style="color:var(--accent)">${importPreviewData.length}</b> ${t("importPairs")}</div>`;
     html += '<div class="preview-box">';
 
     importPreviewData.slice(0, 30).forEach(word => {
@@ -1306,10 +1658,15 @@ function previewImport() {
     });
 
     if (importPreviewData.length > 30) {
-      html += `<div style="font-size:11px; color:var(--faint); margin-top:4px">…і ще ${importPreviewData.length - 30}</div>`;
+      html += `<div style="font-size:11px; color:var(--faint); margin-top:4px">${t("importMore")} ${importPreviewData.length - 30}</div>`;
     }
     html += '</div>';
-    html += `<button class="btn btn-primary mt-12" style="width:100%" onclick="doImport()">Імпортувати ${importPreviewData.length}</button>`;
+    html += `<button class="btn btn-primary mt-12" style="width:100%" onclick="doImport()">${t("importButton")} ${importPreviewData.length}</button>`;
+  } else {
+    if (hintEl) {
+      hintEl.style.display = hasInput ? "" : "";
+      hintEl.textContent = t("importEnterHint");
+    }
   }
 
   document.getElementById("import-preview").innerHTML = html;
@@ -1428,7 +1785,7 @@ function renderWordList() {
 
   let html = "";
   if (!filtered.length) {
-    html = `<p style="color:var(--faint); font-size:13px; text-align:center">${appData.words.length ? "Не знайдено" : "Порожній"}</p>`;
+    html = `<p style="color:var(--faint); font-size:13px; text-align:center">${appData.words.length ? t("wordsNotFound") : t("wordsEmpty")}</p>`;
   } else {
     filtered.forEach(word => {
       const status = getWordStatus(word);
@@ -1455,7 +1812,7 @@ function renderWordList() {
   }
 
   document.getElementById("word-list-container").innerHTML = html;
-  document.getElementById("word-list-counter").textContent = `${filtered.length} з ${appData.words.length}`;
+  document.getElementById("word-list-counter").textContent = `${filtered.length} ${t("wordsOf")} ${appData.words.length}`;
 }
 
 function deleteWord(wordId) {
@@ -1549,9 +1906,9 @@ function renderMemoryList() {
       html += `<div style="width:100%; padding-left:46px; margin-top:4px">
         <textarea id="memory-edit-textarea" style="font-size:12px; min-height:40px">${escapeHTML(mnemonic ? mnemonic.text : '')}</textarea>
         <div class="flex-row mt-6">
-          <button class="btn btn-small btn-primary" onclick="saveMemoryMnemonic('${word.id}')">Зберегти</button>
-          <button class="btn btn-small" onclick="memoryEditingWordId = null; renderMemoryList()">✕</button>
-          ${mnemonic ? `<button class="btn btn-small btn-danger" onclick="delete appData.mnemonics['${word.id}']; saveData(); memoryEditingWordId = null; renderMemoryList()">Видалити</button>` : ''}
+          <button class="btn btn-small btn-primary" onclick="saveMemoryMnemonic('${word.id}')">${t("save")}</button>
+          <button class="btn btn-small" onclick="memoryEditingWordId = null; renderMemoryList()">${t("cancel")}</button>
+          ${mnemonic ? `<button class="btn btn-small btn-danger" onclick="delete appData.mnemonics['${word.id}']; saveData(); memoryEditingWordId = null; renderMemoryList()">${t("delete")}</button>` : ''}
         </div>
       </div>`;
     } else if (mnemonic) {
@@ -1561,15 +1918,15 @@ function renderMemoryList() {
       </div>`;
     } else {
       html += `<div style="width:100%; padding-left:46px; margin-top:2px">
-        <button class="edit-button" onclick="memoryEditingWordId = '${word.id}'; renderMemoryList()" style="font-size:11px; color:var(--faint)">+ мнемоніка</button>
+        <button class="edit-button" onclick="memoryEditingWordId = '${word.id}'; renderMemoryList()" style="font-size:11px; color:var(--faint)">${t("memoryAddMnemonic")}</button>
       </div>`;
     }
 
     html += '</div>';
   });
 
-  document.getElementById("memory-list-container").innerHTML = html || '<p class="text-center hint">Немає слів</p>';
-  document.getElementById("memory-counter").textContent = `${appData.memorized.length} вивчено з ${appData.words.length}`;
+  document.getElementById("memory-list-container").innerHTML = html || `<p class="text-center hint">${t("memoryNoWords")}</p>`;
+  document.getElementById("memory-counter").textContent = `${appData.memorized.length} ${t("memoryLearned")} ${appData.words.length}`;
 
   // Focus textarea if editing
   if (memoryEditingWordId) {
@@ -1625,24 +1982,24 @@ function showTestSetup() {
   const categories = getAllCategories();
 
   let html = '<div class="card">';
-  html += '<div class="label mb-12">Що тестувати?</div>';
+  html += `<div class="label mb-12">${t("testTitle")}</div>`;
   html += '<div class="test-filter-row">';
 
   // "All" button
   html += `<button class="test-filter-btn" onclick="startTest('all')" ${active.length === 0 ? 'disabled' : ''}>
-    Усі слова (${active.length})
+    ${t("testAll")} (${active.length})
   </button>`;
 
   // "With mnemonics" button
   html += `<button class="test-filter-btn" onclick="startTest('with-mnemonics')" ${withMnemonics.length === 0 ? 'disabled' : ''} style="border-color:var(--gold); color:var(--gold)">
-    ✦ З мнемоніками (${withMnemonics.length})
+    ${t("testWithMnemonics")} (${withMnemonics.length})
   </button>`;
 
   html += '</div>';
 
   // Category buttons
   if (categories.length > 0) {
-    html += '<div class="label mt-16 mb-8">За категорією:</div>';
+    html += `<div class="label mt-16 mb-8">${t("testByCategory")}</div>`;
     html += '<div class="test-filter-row">';
     categories.forEach(cat => {
       const catWords = active.filter(w => w.category === cat);
@@ -1655,12 +2012,12 @@ function showTestSetup() {
   }
 
   if (active.length === 0) {
-    html += `<p class="hint mt-16 text-center">${appData.memorized.length ? 'Усі вивчені! 🎉' : 'Немає слів.'}</p>`;
+    html += `<p class="hint mt-16 text-center">${appData.memorized.length ? t("testAllLearned") : t("testNoWords")}</p>`;
     html += '<div class="flex-row mt-12" style="justify-content:center">';
     if (appData.memorized.length) {
-      html += '<button class="btn btn-small" onclick="navigateTo(\'memory\')">Пам\'ять</button>';
+      html += `<button class="btn btn-small" onclick="navigateTo('memory')">${t("navMemory")}</button>`;
     }
-    html += '<button class="btn btn-small" onclick="navigateTo(\'import\')">Імпорт</button>';
+    html += `<button class="btn btn-small" onclick="navigateTo('import')">${t("navImport")}</button>`;
     html += '</div>';
   }
 
@@ -1699,7 +2056,7 @@ function renderTestCard() {
     const emoji = percentage >= 80 ? '🌟' : percentage >= 50 ? '💪' : '🔄';
 
     container.innerHTML = `<div class="card text-center">
-      <div class="label mb-16">Результат</div>
+      <div class="label mb-16">${t("testResult")}</div>
       <div style="font-size:40px" class="mb-8">${emoji}</div>
       <div style="font-size:22px" class="mb-8">
         <span style="color:var(--color-solid)">${testScore.yes}</span>
@@ -1708,9 +2065,9 @@ function renderTestCard() {
       </div>
       <div style="font-size:13px; color:var(--dim)" class="mb-16">${percentage}%</div>
       <div class="flex-row" style="justify-content:center">
-        <button class="btn btn-small btn-primary" onclick="startTest('${escapeHTML(testFilter)}')">Ще раз</button>
-        <button class="btn btn-small" onclick="showTestSetup()">Інший тест</button>
-        <button class="btn btn-small" onclick="navigateTo('wheel')">Колесо</button>
+        <button class="btn btn-small btn-primary" onclick="startTest('${escapeHTML(testFilter)}')">${t("testAgain")}</button>
+        <button class="btn btn-small" onclick="showTestSetup()">${t("testOtherTest")}</button>
+        <button class="btn btn-small" onclick="navigateTo('wheel')">${t("navWheel")}</button>
       </div>
     </div>`;
     return;
@@ -1732,7 +2089,7 @@ function renderTestCard() {
   }
 
   if (!testAnswerShown) {
-    html += '<div class="mt-20"><button class="btn btn-primary" onclick="revealTestAnswer()">Показати</button></div>';
+    html += `<div class="mt-20"><button class="btn btn-primary" onclick="revealTestAnswer()">${t("testShow")}</button></div>`;
   } else {
     html += `<div style="font-size:26px; font-weight:700; margin:16px 0">${word.target}</div>`;
 
@@ -1743,11 +2100,11 @@ function renderTestCard() {
       </div>`;
     }
 
-    html += '<div style="font-size:13px; color:var(--dim)" class="mt-12 mb-12">Пам\'ятав(ла)?</div>';
+    html += `<div style="font-size:13px; color:var(--dim)" class="mt-12 mb-12">${t("testRemembered")}</div>`;
     html += `<div class="flex-row" style="justify-content:center">
-      <button class="btn btn-small btn-success" onclick="answerTest(true)">Так ✓</button>
-      <button class="btn btn-small btn-danger" onclick="answerTest(false)">Ні ✗</button>
-      <button class="btn btn-small btn-success" onclick="answerTest(true); markAsMemorized('${word.id}')" style="font-size:11px">✓✓ Знаю</button>
+      <button class="btn btn-small btn-success" onclick="answerTest(true)">${t("testYes")}</button>
+      <button class="btn btn-small btn-danger" onclick="answerTest(false)">${t("testNo")}</button>
+      <button class="btn btn-small btn-success" onclick="answerTest(true); markAsMemorized('${word.id}')" style="font-size:11px">${t("testKnowForever")}</button>
     </div>`;
   }
 
@@ -1787,6 +2144,12 @@ loadData();
 saveData();
 checkWheelEmpty();
 loadWheelWords();
+
+// Apply saved language
+document.querySelectorAll(".lang-btn").forEach(btn => {
+  btn.classList.toggle("active", btn.dataset.lang === currentLang);
+});
+applyTranslations();
 
 // Redraw wheel on resize
 window.addEventListener("resize", () => {
