@@ -1201,7 +1201,7 @@ function drawWheel() {
   // ── Center dot and pointer ──
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="5" fill="var(--accent)" opacity=".4"/>`;
   html += `<circle cx="${CENTER}" cy="${CENTER}" r="2" fill="var(--card)"/>`;
-  html += `<polygon id="wheel-pointer" points="${CENTER},${CENTER - OUTER_RADIUS - 7} ${CENTER - 5},${CENTER - OUTER_RADIUS + 5} ${CENTER + 5},${CENTER - OUTER_RADIUS + 5}" fill="var(--coral)" opacity=".75"/>`;
+  html += `<polygon id="wheel-pointer" points="${CENTER},${CENTER - OUTER_RADIUS + 5} ${CENTER - 5},${CENTER - OUTER_RADIUS - 7} ${CENTER + 5},${CENTER - OUTER_RADIUS - 7}" fill="var(--coral)" opacity=".75"/>`;
 
   svg.innerHTML = html;
   setupWheelDrag();
