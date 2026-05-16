@@ -221,16 +221,6 @@
     svg .wheel-ring { cursor: grab; }
     svg .wheel-ring:active { cursor: grabbing; }
 
-    /* Pointer bounce during spin */
-    .pointer-bounce {
-      animation: pointer-wiggle 0.15s ease-in-out infinite alternate;
-      transform-origin: center;
-    }
-    @keyframes pointer-wiggle {
-      0%   { transform: rotate(-3deg) translateY(0); }
-      100% { transform: rotate(3deg) translateY(1px); }
-    }
-
     /* ── Status indicators ── */
     .status-dot {
       display: inline-block; width: 8px; height: 8px;
@@ -378,6 +368,71 @@
       .archetype-emoji { font-size: 24px; }
       .archetype-name { font-size: 10px; }
     }
+
+    /* ── SRS Hooks & Feedback ── */
+    .hook-row {
+      display: flex; gap: 6px; margin: 10px 0;
+    }
+    .hook-row input {
+      flex: 1; min-width: 0; padding: 7px 8px;
+      font-size: 12px; border-radius: 6px;
+    }
+    .hook-row input::placeholder { font-size: 11px; }
+    .srs-row {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      justify-content: center; margin-top: 12px;
+    }
+    .srs-btn {
+      flex: 1; min-width: 70px; padding: 8px 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px; font-weight: 500;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      background: var(--card); cursor: pointer;
+      transition: .15s; text-align: center; line-height: 1.3;
+    }
+    .srs-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .srs-forgot { border-color: #e07060; color: #c05040; }
+    .srs-forgot:hover { background: #fdf0ee; }
+    .srs-effort { border-color: #d4a030; color: #b08020; }
+    .srs-effort:hover { background: #fdf5e8; }
+    .srs-easy { border-color: var(--color-solid); color: var(--color-solid); }
+    .srs-easy:hover { background: #edf7f0; }
+    .srs-archive {
+      border-color: var(--border); color: var(--faint);
+      font-size: 10px; flex: 0; min-width: auto; padding: 6px 10px;
+    }
+    .srs-archive:hover { background: var(--bg2); }
+    .strength-badge {
+      display: inline-block; padding: 1px 6px;
+      border-radius: 8px; font-size: 9px; font-weight: 600;
+      margin-left: 5px;
+    }
+    .str-0 { background: #f0e8e8; color: #a08080; }
+    .str-1 { background: #fdf0ee; color: #c05040; }
+    .str-2 { background: #fdf5e8; color: #b08020; }
+    .str-3 { background: #edf7f0; color: var(--color-solid); }
+    .overdue-dot {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: #e07060;
+      margin-left: 4px; vertical-align: middle;
+    }
+    .reveal-btn {
+      padding: 12px 28px; font-size: 15px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      font-weight: 600; transition: .15s;
+    }
+    .reveal-btn:hover { background: #237063; }
+    .hook-display {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin: 8px 0; justify-content: center;
+    }
+    .hook-tag {
+      padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; background: var(--gold-bg);
+      color: #8a7030; border: 1px solid #e8d8a8;
+    }
   </style>
 </head>
 <body>
@@ -482,6 +537,7 @@
              id="words-search" oninput="renderWordList()">
       <button class="btn btn-small" onclick="exportAsText()">↓ txt</button>
       <button class="btn btn-small" onclick="swapAllWords()" id="swap-all-btn" title="Swap source ↔ target">⇄</button>
+      <button class="btn btn-small" onclick="deleteAllWords()" style="color:var(--color-danger); border-color:var(--color-danger)" title="Delete all">🗑</button>
     </div>
 
     <div class="card scrollable-list" id="word-list-container"></div>
@@ -541,25 +597,21 @@
 /* ══════════════════════════════════════════════════
    DATA & CONSTANTS
    ══════════════════════════════════════════════════ */
-  
-  const DEFAULT_ARCHETYPES = [
-  { symbol: "🛌", name: { uk: "Подушка", en: "Pillow" } },
-  { symbol: "🥄", name: { uk: "Ложка", en: "Spoon" } },
-  { symbol: "🧼", name: { uk: "Рушник", en: "Towel" } }, // (символ мила/ванної добре асоціюється з рушником)
-  { symbol: "☕", name: { uk: "Чашка", en: "Cup" } },
-  { symbol: "📱", name: { uk: "Телефон", en: "Phone" } },
-  { symbol: "🔑", name: { uk: "Ключі", en: "Keys" } },
-  { symbol: "🧦", name: { uk: "Шкарпетка", en: "Sock" } },
-  { symbol: "🪥", name: { uk: "Щітка", en: "Toothbrush" } },
-  { symbol: "🛏️", name: { uk: "Ліжко", en: "Bed" } },
-  { symbol: "🚪", name: { uk: "Двері", en: "Door" } },
-  { symbol: "👕", name: { uk: "Футболка", en: "T-shirt" } },
-  { symbol: "🪞", name: { uk: "Дзеркало", en: "Mirror" } },
-  { symbol: "🧻", name: { uk: "Серветка", en: "Tissue" } },
-  { symbol: "🩴", name: { uk: "Туалетка", en: "Flip flop" } },
-  { symbol: "🪙", name: { uk: "Монета", en: "Coin" } },
-];
 
+const DEFAULT_ARCHETYPES = [
+  { symbol: "☕", name: { uk: "Чашка", en: "Cup" } },
+  { symbol: "🔑", name: { uk: "Ключі", en: "Keys" } },
+  { symbol: "📱", name: { uk: "Телефон", en: "Phone" } },
+  { symbol: "🪥", name: { uk: "Щітка", en: "Toothbrush" } },
+  { symbol: "🥄", name: { uk: "Ложка", en: "Spoon" } },
+  { symbol: "✂️", name: { uk: "Ножиці", en: "Scissors" } },
+  { symbol: "🧊", name: { uk: "Лід", en: "Ice" } },
+  { symbol: "🧤", name: { uk: "Рукавиця", en: "Glove" } },
+  { symbol: "🔨", name: { uk: "Молоток", en: "Hammer" } },
+  { symbol: "🕯️", name: { uk: "Свічка", en: "Candle" } },
+  { symbol: "🧲", name: { uk: "Магніт", en: "Magnet" } },
+  { symbol: "🪞", name: { uk: "Дзеркало", en: "Mirror" } },
+];
 
 const CATEGORY_COLORS = [
   '#2a7d6e', '#5a8db5', '#b86a8a', '#4a9e6b', '#c96b50',
@@ -639,6 +691,17 @@ const TRANSLATIONS = {
     navHelp: "?",
     importEnterHint: "Введіть хоча б одну пару \"слово — переклад\"",
     swapConfirm: "Поміняти місцями слово ↔ переклад для ВСІХ слів?",
+    deleteAllConfirm: "Видалити ВСІ слова, мнемоніки та прогрес? Цю дію неможливо скасувати.",
+    hookAction: "Дія (напр: облив)",
+    hookSound: "Звучить як (напр: кеди)",
+    hookFeeling: "Відчуття (напр: гаряче)",
+    wheelReveal: "Показати переклад",
+    srsForgot: "Забув",
+    srsEffort: "Із зусиллям",
+    srsEasy: "Легко",
+    srsArchiveBtn: "Не показувати",
+    srsArchived: "Архівовано",
+    srsSaved: "✓ Збережено. Крутіть далі!",
     helpContent: `
       <div class="help-section">
         <h3>🎯 Що це?</h3>
@@ -734,6 +797,17 @@ const TRANSLATIONS = {
     navHelp: "?",
     importEnterHint: "Enter at least one \"word — translation\" pair",
     swapConfirm: "Swap word ↔ translation for ALL words?",
+    deleteAllConfirm: "Delete ALL words, mnemonics and progress? This cannot be undone.",
+    hookAction: "Action (e.g.: poured)",
+    hookSound: "Sounds like (e.g.: key)",
+    hookFeeling: "Feeling (e.g.: hot)",
+    wheelReveal: "Reveal translation",
+    srsForgot: "Forgot",
+    srsEffort: "With effort",
+    srsEasy: "Easy",
+    srsArchiveBtn: "Don't show",
+    srsArchived: "Archived",
+    srsSaved: "✓ Saved. Spin again!",
     helpContent: `
       <div class="help-section">
         <h3>🎯 What is this?</h3>
@@ -886,9 +960,8 @@ function renderHelp() {
  */
 let appData = {
   words: [],
-  mnemonics: {},
-  stats: {},
-  memorized: [],
+  mnemonics: {},   // { [id]: { action, soundHook, feeling, archetypeSymbol, archetypeName } }
+  progress: {},    // { [id]: { strength: 0-3, nextReview: ISO string|null, archived: bool } }
   archetypes: null,
   archetypeCount: 12,
   wordCount: 12,
@@ -899,7 +972,7 @@ let appData = {
    PERSISTENCE
    ══════════════════════════════════════════════════ */
 
-const STORAGE_KEY = "bruno-volvelle-v7";
+const STORAGE_KEY = "bruno-volvelle-v8";
 
 function loadData() {
   try {
@@ -914,8 +987,8 @@ function loadData() {
           const parsed = JSON.parse(old);
           appData.words = parsed.words || [];
           appData.mnemonics = parsed.mn || parsed.mnemonics || {};
-          appData.stats = parsed.st || parsed.stats || {};
-          appData.memorized = parsed.mem || parsed.memorized || [];
+          appData.progress = parsed.st || parsed.stats || {};
+          const _oldMem = parsed.mem || parsed.memorized || [];
           appData.archetypes = parsed.arc || parsed.archetypes || null;
           appData.archetypeCount = parsed.nA || parsed.archetypeCount || 12;
           appData.wordCount = parsed.nW || parsed.wordCount || 12;
@@ -933,14 +1006,33 @@ function loadData() {
 
           // Normalize stats from { y, n } → { yes, no }
           const newSt = {};
-          for (const [key, val] of Object.entries(appData.stats)) {
+          for (const [key, val] of Object.entries(appData.progress)) {
             if (val.y !== undefined) {
               newSt[key] = { yes: val.y || 0, no: val.n || 0 };
             } else {
               newSt[key] = val;
             }
           }
-          appData.stats = newSt;
+          appData.progress = newSt;
+
+          // Convert old stats {yes,no} → proper progress {strength,nextReview,archived}
+          const properProgress = {};
+          for (const [key, val] of Object.entries(appData.progress)) {
+            const yes = val.yes || 0, no = val.no || 0;
+            let str = 0;
+            if (yes > no * 2) str = 2;
+            else if (yes > 0) str = 1;
+            properProgress[key] = { strength: str, nextReview: null, archived: false };
+          }
+          appData.progress = properProgress;
+
+          // Migrate old memorized[] → progress.archived
+          if (_oldMem && _oldMem.length) {
+            _oldMem.forEach(id => {
+              if (!appData.progress[id]) appData.progress[id] = { strength: 3, nextReview: null, archived: true };
+              else appData.progress[id].archived = true;
+            });
+          }
 
           // Normalize archetypes from { s, n } → { symbol, name }
           if (appData.archetypes) {
@@ -954,9 +1046,23 @@ function loadData() {
         }
       }
     }
-    if (!appData.memorized) appData.memorized = [];
+    // Ensure progress exists
+    if (!appData.progress) appData.progress = {};
     if (!appData.archetypeCount) appData.archetypeCount = 12;
     if (!appData.wordCount) appData.wordCount = 12;
+
+    // Migrate old mnemonics format {text/t} → {action}
+    Object.entries(appData.mnemonics || {}).forEach(([id, m]) => {
+      if (m.text !== undefined || m.t !== undefined) {
+        appData.mnemonics[id] = {
+          action: m.text || m.t || '',
+          soundHook: '',
+          feeling: '',
+          archetypeSymbol: m.archetypeSymbol || m.a || '✦',
+          archetypeName: m.archetypeName || m.an || '',
+        };
+      }
+    });
   } catch (e) {
     appData = { words: [], mnemonics: {}, stats: {}, memorized: [], archetypes: null, archetypeCount: 12, wordCount: 12 };
   }
@@ -969,8 +1075,11 @@ function saveData() {
 
 function updateStatsLine() {
   const mnemonicCount = Object.keys(appData.mnemonics).length;
-  document.getElementById("stats-line").textContent =
-    `${appData.words.length} ${t("statsWords")} · ${appData.memorized.length} ${t("statsLearned")} · ${mnemonicCount} ${t("statsMnemonics")}`;
+  const archivedCount = Object.values(appData.progress).filter(p => p.archived).length;
+  const overdueCount = appData.words.filter(w => isOverdue(w)).length;
+  let line = `${appData.words.length} ${t("statsWords")} · ${archivedCount} ${t("statsLearned")} · ${mnemonicCount} ${t("statsMnemonics")}`;
+  if (overdueCount > 0) line += ` · ${overdueCount} ⏰`;
+  document.getElementById("stats-line").textContent = line;
 }
 
 
@@ -1001,18 +1110,65 @@ function getCategoryColor(category) {
 }
 
 function getWordStatus(word) {
-  if (appData.memorized.includes(word.id)) return 'solid';
-  const stats = appData.stats[word.id];
-  if (!stats || (!stats.yes && !stats.no)) return 'new';
-  return 'learning';
+  const p = appData.progress[word.id];
+  if (!p) return 'new';
+  if (p.archived) return 'solid';
+  if (p.strength >= 3) return 'solid';
+  if (p.strength >= 1) return 'learning';
+  return 'new';
+}
+
+function isOverdue(word) {
+  const p = appData.progress[word.id];
+  if (!p || !p.nextReview || p.archived) return false;
+  return new Date(p.nextReview) <= new Date();
+}
+
+function getProgress(wordId) {
+  if (!appData.progress[wordId]) {
+    appData.progress[wordId] = { strength: 0, nextReview: null, archived: false };
+  }
+  return appData.progress[wordId];
+}
+
+function recordStrength(wordId, level) {
+  const p = getProgress(wordId);
+  p.strength = level;
+  const now = new Date();
+  if (level <= 1) {
+    p.nextReview = null; // show again this session
+  } else if (level === 2) {
+    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+    p.nextReview = tomorrow.toISOString();
+  } else {
+    const week = new Date(now); week.setDate(week.getDate() + 7);
+    p.nextReview = week.toISOString();
+  }
+  saveData();
+}
+
+function archiveWord(wordId) {
+  getProgress(wordId).archived = true;
+  saveData();
+}
+
+function unarchiveWord(wordId) {
+  getProgress(wordId).archived = false;
+  saveData();
 }
 
 function getActiveWords() {
-  return appData.words.filter(w => !appData.memorized.includes(w.id));
+  return appData.words.filter(w => {
+    const p = appData.progress[w.id];
+    return !p || !p.archived;
+  });
 }
 
 function getWordsWithMnemonics() {
-  return getActiveWords().filter(w => appData.mnemonics[w.id]);
+  return getActiveWords().filter(w => {
+    const m = appData.mnemonics[w.id];
+    return m && (m.action || m.soundHook || m.feeling);
+  });
 }
 
 function getAllCategories() {
@@ -1149,12 +1305,23 @@ function loadWheelWords() {
   const active = getActiveWords();
   if (!active.length) return;
 
-  const shuffled = shuffleArray(active);
+  // Priority: overdue first, then weak (str 0-1), then rest
+  const overdue = active.filter(w => isOverdue(w));
+  const weak = active.filter(w => {
+    const p = appData.progress[w.id];
+    return (!p || p.strength <= 1) && !isOverdue(w);
+  });
+  const rest = active.filter(w => {
+    const p = appData.progress[w.id];
+    return p && p.strength >= 2 && !isOverdue(w);
+  });
+
+  const prioritized = [...shuffleArray(overdue), ...shuffleArray(weak), ...shuffleArray(rest)];
   const count = Math.min(appData.wordCount, Math.max(active.length, 1));
 
   wheelWords = [];
   for (let i = 0; i < count; i++) {
-    wheelWords.push(shuffled[i % shuffled.length]);
+    wheelWords.push(prioritized[i % prioritized.length]);
   }
   drawWheel();
 }
@@ -1294,6 +1461,8 @@ function spinWheel() {
   innerRing.style.transform = `rotate(${targetInner}deg)`;
   innerRing.style.transformOrigin = `${CENTER}px ${CENTER}px`;
 
+  // Add bounce class to pointer
+
   // Update stored angles to final values
   outerAngle = targetOuter;
   innerAngle = targetInner;
@@ -1317,116 +1486,120 @@ function showWheelResult() {
   const word = wheelWords[getSelectedIndex(innerAngle, wordCount)];
   if (!word) return;
 
-  const mnemonic = appData.mnemonics[word.id];
+  const mnemonic = appData.mnemonics[word.id] || {};
   const catColor = getCategoryColor(word.category);
   const wordId = word.id;
+  const p = getProgress(wordId);
+  const hasHooks = mnemonic.action || mnemonic.soundHook || mnemonic.feeling;
 
   let html = '<div class="card">';
 
-  // Header: archetype + word
+  // Archetype header
   html += `<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px">
     <span style="font-size:30px">${archetype.symbol}</span>
     <span style="font-size:15px; color:var(--dim); font-weight:600">${escapeHTML(archetype.name)}</span>
   </div>`;
+
+  // Word (always visible, editable)
   html += `<div id="wheel-word-edit" class="word-display" onclick="startInlineEdit('${wordId}', 'wheel-word-edit', showWheelResult)" style="display:inline-block; margin-bottom:6px">
     <div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${word.source}</div>
-    <div style="font-size:16px"><span style="font-weight:700">${word.target}</span>`;
+  </div>`;
+
   if (word.category) {
     html += `<span class="category-tag" style="background:${catColor}15; color:${catColor}; border:1px solid ${catColor}25">${word.category}</span>`;
   }
-  html += '</div></div>';
-  html += `<p class="hint mt-6">${t("wheelImagine")} <b>${archetype.symbol} ${escapeHTML(archetype.name)}</b> ${t("wheelWith")} «<b>${escapeHTML(word.target)}</b>».</p>`;
 
-  // Existing mnemonic (view + edit)
-  if (mnemonic) {
-    html += `<div class="mnemonic-box" id="mnemonic-display">
-      <div style="display:flex; justify-content:space-between; align-items:start; gap:8px">
-        <div style="flex:1">
-          <span style="font-size:10px; color:var(--dim); display:block; margin-bottom:3px">${mnemonic.archetypeSymbol || '✦'} ${escapeHTML(mnemonic.archetypeName || '')}:</span>
-          <span>${escapeHTML(mnemonic.text)}</span>
-        </div>
-        <div style="display:flex; gap:2px">
-          <button class="edit-button" onclick="showMnemonicEdit()">✎</button>
-          <button class="delete-button" onclick="deleteMnemonic('${wordId}')">✕</button>
-        </div>
-      </div>
-    </div>`;
+  // Strength badge
+  const strLabels = ['—', '🔴', '🟡', '🟢'];
+  if (p.strength > 0) {
+    html += `<span class="strength-badge str-${p.strength}">${strLabels[p.strength]}</span>`;
+  }
+  if (isOverdue(word)) html += '<span class="overdue-dot" title="Overdue"></span>';
 
-    html += `<div id="mnemonic-editor" style="display:none" class="mt-8">
-      <textarea id="mnemonic-edit-textarea" style="min-height:48px">${escapeHTML(mnemonic.text)}</textarea>
-      <div class="flex-row mt-8">
-        <button class="btn btn-small btn-primary" onclick="saveEditedMnemonic('${wordId}')">${t("save")}</button>
-        <button class="btn btn-small" onclick="hideMnemonicEdit()">${t("cancel")}</button>
-      </div>
-    </div>`;
+  // Reveal section
+  html += '<div id="wheel-reveal-area" class="mt-12 text-center">';
+  html += '<div id="wheel-hidden-content" style="display:none">';
+
+  // Translation (hidden until revealed)
+  html += `<div style="font-size:22px; font-weight:700; margin:12px 0; color:var(--text)">${word.target}</div>`;
+
+  // Existing hooks display
+  if (hasHooks) {
+    html += '<div class="hook-display">';
+    if (mnemonic.action) html += '<span class="hook-tag">🎬 ' + escapeHTML(mnemonic.action) + '</span>';
+    if (mnemonic.soundHook) html += '<span class="hook-tag">👂 ' + escapeHTML(mnemonic.soundHook) + '</span>';
+    if (mnemonic.feeling) html += '<span class="hook-tag">✋ ' + escapeHTML(mnemonic.feeling) + '</span>';
+    html += '</div>';
   }
 
-  // New mnemonic input
-  html += `<textarea class="mt-10" id="new-mnemonic-input" placeholder="${t("mnemonicPlaceholder")}"></textarea>`;
-  html += `<div class="flex-row mt-8" style="justify-content:space-between">
-    <button class="btn btn-small btn-primary" onclick="saveNewMnemonic('${wordId}', '${escapeHTML(archetype.symbol)}', '${escapeHTML(archetype.name)}')">${mnemonic ? t("wheelUpdate") : t("wheelSave")} ↵</button>
-    <button class="btn btn-small btn-success" onclick="markAsMemorized('${wordId}')">${t("wheelKnow")}</button>
-  </div></div>`;
+  // Hook inputs
+  html += '<div class="hook-row">';
+  html += '<input type="text" id="hook-action" placeholder="' + t("hookAction") + '" value="' + escapeHTML(mnemonic.action || '') + '" oninput="autoSaveHooks(\'' + wordId + '\', \'' + escapeHTML(archetype.symbol) + '\', \'' + escapeHTML(archetype.name) + '\')">';
+  html += '<input type="text" id="hook-sound" placeholder="' + t("hookSound") + '" value="' + escapeHTML(mnemonic.soundHook || '') + '" oninput="autoSaveHooks(\'' + wordId + '\', \'' + escapeHTML(archetype.symbol) + '\', \'' + escapeHTML(archetype.name) + '\')">';
+  html += '<input type="text" id="hook-feeling" placeholder="' + t("hookFeeling") + '" value="' + escapeHTML(mnemonic.feeling || '') + '" oninput="autoSaveHooks(\'' + wordId + '\', \'' + escapeHTML(archetype.symbol) + '\', \'' + escapeHTML(archetype.name) + '\')">';
+  html += '</div>';
 
-  const resultEl = document.getElementById("wheel-result");
-  resultEl.innerHTML = html;
-  resultEl.style.display = "";
+  // SRS feedback buttons
+  html += '<div class="srs-row">';
+  html += '<button class="srs-btn srs-forgot" onclick="handleSRS(\'' + wordId + '\', 1)">🔴 ' + t("srsForgot") + '</button>';
+  html += '<button class="srs-btn srs-effort" onclick="handleSRS(\'' + wordId + '\', 2)">🟡 ' + t("srsEffort") + '</button>';
+  html += '<button class="srs-btn srs-easy" onclick="handleSRS(\'' + wordId + '\', 3)">🟢 ' + t("srsEasy") + '</button>';
+  html += '</div>';
+  html += '<div style="margin-top:8px; text-align:center">';
+  html += '<button class="srs-btn srs-archive" onclick="doArchiveFromWheel(\'' + wordId + '\')">📦 ' + t("srsArchiveBtn") + '</button>';
+  html += '</div>';
 
-  // Enter to save
-  const input = document.getElementById("new-mnemonic-input");
-  if (input) {
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        saveNewMnemonic(wordId, archetype.symbol, archetype.name);
-      }
-    });
+  html += '</div>'; // end hidden content
+
+  // Reveal button
+  html += '<button class="reveal-btn" id="reveal-btn" onclick="document.getElementById(\'wheel-hidden-content\').style.display=\'\'; document.getElementById(\'reveal-btn\').style.display=\'none\'">👁️ ' + t("wheelReveal") + '</button>';
+
+  html += '</div>'; // end reveal area
+  html += '</div>'; // end card
+
+  const el = document.getElementById("wheel-result");
+  el.innerHTML = html;
+  el.style.display = "";
+}
+
+function doArchiveFromWheel(wordId) {
+  archiveWord(wordId);
+  loadWheelWords();
+  checkWheelEmpty();
+  const el = document.getElementById('wheel-result');
+  if (el) el.innerHTML = '<div class="card text-center"><p style="color:var(--color-solid)">📦 ' + t("srsArchived") + '</p></div>';
+}
+
+function handleSRS(wordId, level) {
+  recordStrength(wordId, level);
+  const icons = { 1: '🔴', 2: '🟡', 3: '🟢' };
+  const labels = { 1: t('srsForgot'), 2: t('srsEffort'), 3: t('srsEasy') };
+  const colors = { 1: '#c05040', 2: '#b08020', 3: 'var(--color-solid)' };
+
+  // Show confirmation in the reveal area
+  const area = document.getElementById('wheel-reveal-area');
+  if (area) {
+    area.innerHTML = '<div style="text-align:center; padding:16px 0; animation:si .3s ease-out">' +
+      '<div style="font-size:28px; margin-bottom:6px">' + icons[level] + '</div>' +
+      '<div style="font-size:14px; font-weight:600; color:' + colors[level] + '">' + labels[level] + '</div>' +
+      '<div class="hint mt-6">' + t("srsSaved") + '</div>' +
+      '</div>';
   }
+
+  // Update stats line
+  updateStatsLine();
 }
 
-function saveNewMnemonic(wordId, arcSymbol, arcName) {
-  const input = document.getElementById("new-mnemonic-input");
-  if (!input || !input.value.trim()) return;
-
-  appData.mnemonics[wordId] = {
-    text: input.value.trim(),
-    archetypeSymbol: arcSymbol,
-    archetypeName: arcName,
-  };
+function autoSaveHooks(wordId, arcSymbol, arcName) {
+  const action = document.getElementById("hook-action")?.value.trim() || '';
+  const soundHook = document.getElementById("hook-sound")?.value.trim() || '';
+  const feeling = document.getElementById("hook-feeling")?.value.trim() || '';
+  appData.mnemonics[wordId] = { action, soundHook, feeling, archetypeSymbol: arcSymbol, archetypeName: arcName };
   saveData();
-  showWheelResult();
-}
-
-function deleteMnemonic(wordId) {
-  delete appData.mnemonics[wordId];
-  saveData();
-  showWheelResult();
-}
-
-function showMnemonicEdit() {
-  document.getElementById("mnemonic-display").style.display = "none";
-  document.getElementById("mnemonic-editor").style.display = "";
-  document.getElementById("mnemonic-edit-textarea").focus();
-}
-
-function hideMnemonicEdit() {
-  document.getElementById("mnemonic-display").style.display = "";
-  document.getElementById("mnemonic-editor").style.display = "none";
-}
-
-function saveEditedMnemonic(wordId) {
-  const textarea = document.getElementById("mnemonic-edit-textarea");
-  if (!textarea || !textarea.value.trim()) return;
-  appData.mnemonics[wordId].text = textarea.value.trim();
-  saveData();
-  showWheelResult();
 }
 
 function markAsMemorized(wordId) {
-  if (!appData.memorized.includes(wordId)) {
-    appData.memorized.push(wordId);
-  }
-  saveData();
+  archiveWord(wordId);
   document.getElementById("wheel-result").innerHTML = `
     <div class="card text-center">
       <div style="font-size:32px; margin-bottom:8px; color:var(--color-solid)">✦</div>
@@ -1772,11 +1945,11 @@ function importFromJSON(fileInput) {
 
       const importedStats = imported.stats || imported.st || {};
       Object.entries(importedStats).forEach(([key, val]) => {
-        if (!appData.stats[key]) appData.stats[key] = val;
+        if (!appData.progress[key]) appData.progress[key] = val;
       });
 
       (imported.memorized || imported.mem || []).forEach(id => {
-        if (!appData.memorized.includes(id)) appData.memorized.push(id);
+        if (!appData.progress[id]) appData.progress[id] = { strength: 3, nextReview: null, archived: true }; else appData.progress[id].archived = true;
       });
 
       if ((imported.archetypes || imported.arc) && !appData.archetypes) {
@@ -1852,8 +2025,7 @@ function renderWordList() {
 function deleteWord(wordId) {
   appData.words = appData.words.filter(w => w.id !== wordId);
   delete appData.mnemonics[wordId];
-  delete appData.stats[wordId];
-  appData.memorized = appData.memorized.filter(id => id !== wordId);
+  delete appData.progress[wordId];
   saveData();
   renderWordList();
 }
@@ -1977,6 +2149,16 @@ function swapAllWords() {
   renderWordList();
 }
 
+function deleteAllWords() {
+  if (!appData.words.length) return;
+  if (!confirm(t("deleteAllConfirm"))) return;
+  appData.words = [];
+  appData.mnemonics = {};
+  appData.progress = {};
+  saveData();
+  renderWordList();
+}
+
 
 /* ══════════════════════════════════════════════════
    MEMORY SCREEN
@@ -1999,13 +2181,13 @@ function renderMemoryList() {
 
   // Sort: active words first, memorized at bottom
   filtered.sort((a, b) => {
-    return (appData.memorized.includes(a.id) ? 1 : 0) - (appData.memorized.includes(b.id) ? 1 : 0);
+    return (getProgress(a.id).archived ? 1 : 0) - (getProgress(b.id).archived ? 1 : 0);
   });
 
   let html = "";
   filtered.forEach(word => {
-    const isMemorized = appData.memorized.includes(word.id);
-    const stats = appData.stats[word.id];
+    const isMemorized = getProgress(word.id).archived;
+    const prog = getProgress(word.id);
     const catColor = getCategoryColor(word.category);
     const mnemonic = appData.mnemonics[word.id];
 
@@ -2021,29 +2203,34 @@ function renderMemoryList() {
     if (word.category) {
       html += `<span class="category-tag" style="background:${catColor}12; color:${catColor}; border:1px solid ${catColor}20">${word.category}</span>`;
     }
-    if (stats && (stats.yes || stats.no)) {
-      html += `<span style="font-size:10px; margin-left:4px">
-        <span style="color:var(--color-solid)">${stats.yes || 0}✓</span>
-        <span style="color:var(--color-danger)">${stats.no || 0}✗</span>
-      </span>`;
+    if (prog.strength > 0) {
+      const sl = ['','🔴','🟡','🟢'];
+      html += '<span class="strength-badge str-' + prog.strength + '">' + sl[prog.strength] + '</span>';
     }
+    if (isOverdue(word)) html += '<span class="overdue-dot"></span>';
     html += '</div>';
 
-    // Mnemonic: inline edit
+    // Mnemonic hooks: inline edit
+    const hasHooks = mnemonic && (mnemonic.action || mnemonic.soundHook || mnemonic.feeling);
     if (memoryEditingWordId === word.id) {
       html += `<div style="width:100%; padding-left:46px; margin-top:4px">
-        <textarea id="memory-edit-textarea" style="font-size:12px; min-height:40px">${escapeHTML(mnemonic ? mnemonic.text : '')}</textarea>
+        <div class="hook-row">
+          <input type="text" id="mem-hook-action" value="${escapeHTML(mnemonic?.action || '')}" placeholder="${t('hookAction')}">
+          <input type="text" id="mem-hook-sound" value="${escapeHTML(mnemonic?.soundHook || '')}" placeholder="${t('hookSound')}">
+          <input type="text" id="mem-hook-feeling" value="${escapeHTML(mnemonic?.feeling || '')}" placeholder="${t('hookFeeling')}">
+        </div>
         <div class="flex-row mt-6">
-          <button class="btn btn-small btn-primary" onclick="saveMemoryMnemonic('${word.id}')">${t("save")}</button>
+          <button class="btn btn-small btn-primary" onclick="saveMemoryHooks('${word.id}')">${t("save")}</button>
           <button class="btn btn-small" onclick="memoryEditingWordId = null; renderMemoryList()">${t("cancel")}</button>
-          ${mnemonic ? `<button class="btn btn-small btn-danger" onclick="delete appData.mnemonics['${word.id}']; saveData(); memoryEditingWordId = null; renderMemoryList()">${t("delete")}</button>` : ''}
         </div>
       </div>`;
-    } else if (mnemonic) {
-      html += `<div style="width:100%; padding-left:46px; margin-top:2px; display:flex; align-items:start; gap:4px">
-        <span style="font-size:11px; color:var(--dim); font-style:italic; flex:1">${mnemonic.archetypeSymbol || '✦'} ${escapeHTML(mnemonic.text.length > 60 ? mnemonic.text.slice(0, 57) + '…' : mnemonic.text)}</span>
-        <button class="edit-button" onclick="memoryEditingWordId = '${word.id}'; renderMemoryList()" style="font-size:11px; padding:2px 5px">✎</button>
-      </div>`;
+    } else if (hasHooks) {
+      html += '<div style="width:100%; padding-left:46px; margin-top:2px; display:flex; align-items:center; gap:4px; flex-wrap:wrap">';
+      if (mnemonic.action) html += '<span class="hook-tag" style="font-size:10px">🎬 ' + escapeHTML(mnemonic.action) + '</span>';
+      if (mnemonic.soundHook) html += '<span class="hook-tag" style="font-size:10px">👂 ' + escapeHTML(mnemonic.soundHook) + '</span>';
+      if (mnemonic.feeling) html += '<span class="hook-tag" style="font-size:10px">✋ ' + escapeHTML(mnemonic.feeling) + '</span>';
+      html += `<button class="edit-button" onclick="memoryEditingWordId = '${word.id}'; renderMemoryList()" style="font-size:10px; padding:2px 4px">✎</button>`;
+      html += '</div>';
     } else {
       html += `<div style="width:100%; padding-left:46px; margin-top:2px">
         <button class="edit-button" onclick="memoryEditingWordId = '${word.id}'; renderMemoryList()" style="font-size:11px; color:var(--faint)">${t("memoryAddMnemonic")}</button>
@@ -2054,7 +2241,8 @@ function renderMemoryList() {
   });
 
   document.getElementById("memory-list-container").innerHTML = html || `<p class="text-center hint">${t("memoryNoWords")}</p>`;
-  document.getElementById("memory-counter").textContent = `${appData.memorized.length} ${t("memoryLearned")} ${appData.words.length}`;
+  const archivedCnt = Object.values(appData.progress).filter(p => p.archived).length;
+  document.getElementById("memory-counter").textContent = `${archivedCnt} ${t("memoryLearned")} ${appData.words.length}`;
 
   // Focus textarea if editing
   if (memoryEditingWordId) {
@@ -2063,17 +2251,16 @@ function renderMemoryList() {
   }
 }
 
-function saveMemoryMnemonic(wordId) {
-  const textarea = document.getElementById("memory-edit-textarea");
-  if (!textarea) return;
-
-  const text = textarea.value.trim();
-  if (text) {
-    if (!appData.mnemonics[wordId]) {
-      appData.mnemonics[wordId] = { text, archetypeSymbol: '✦', archetypeName: '' };
-    } else {
-      appData.mnemonics[wordId].text = text;
-    }
+function saveMemoryHooks(wordId) {
+  const action = document.getElementById("mem-hook-action")?.value.trim() || '';
+  const soundHook = document.getElementById("mem-hook-sound")?.value.trim() || '';
+  const feeling = document.getElementById("mem-hook-feeling")?.value.trim() || '';
+  if (!appData.mnemonics[wordId]) {
+    appData.mnemonics[wordId] = { action, soundHook, feeling, archetypeSymbol: '✦', archetypeName: '' };
+  } else {
+    appData.mnemonics[wordId].action = action;
+    appData.mnemonics[wordId].soundHook = soundHook;
+    appData.mnemonics[wordId].feeling = feeling;
   }
   saveData();
   memoryEditingWordId = null;
@@ -2081,12 +2268,8 @@ function saveMemoryMnemonic(wordId) {
 }
 
 function toggleMemorized(wordId) {
-  const index = appData.memorized.indexOf(wordId);
-  if (index >= 0) {
-    appData.memorized.splice(index, 1);
-  } else {
-    appData.memorized.push(wordId);
-  }
+  const p = getProgress(wordId);
+  p.archived = !p.archived;
   saveData();
   renderMemoryList();
 }
@@ -2153,9 +2336,9 @@ function showTestSetup() {
   }
 
   if (active.length === 0) {
-    html += `<p class="hint mt-16 text-center">${appData.memorized.length ? t("testAllLearned") : t("testNoWords")}</p>`;
+    html += `<p class="hint mt-16 text-center">${Object.values(appData.progress).some(p=>p.archived) ? t("testAllLearned") : t("testNoWords")}</p>`;
     html += '<div class="flex-row mt-12" style="justify-content:center">';
-    if (appData.memorized.length) {
+    if (Object.values(appData.progress).some(p=>p.archived)) {
       html += `<button class="btn btn-small" onclick="navigateTo('memory')">${t("navMemory")}</button>`;
     }
     html += `<button class="btn btn-small" onclick="navigateTo('import')">${t("navImport")}</button>`;
@@ -2252,11 +2435,13 @@ function renderTestCard() {
       html += `<div class="tibetan-font" style="font-size:30px; color:var(--accent); margin:16px 0">${answerText}</div>`;
     }
 
-    if (mnemonic) {
-      html += `<div class="mnemonic-box" style="text-align:left">
-        <span style="font-size:10px; color:var(--dim); display:block; margin-bottom:2px">${mnemonic.archetypeSymbol || '✦'}:</span>
-        ${escapeHTML(mnemonic.text)}
-      </div>`;
+    const testHasHooks = mnemonic && (mnemonic.action || mnemonic.soundHook || mnemonic.feeling);
+    if (testHasHooks) {
+      html += '<div class="hook-display" style="justify-content:flex-start">';
+      if (mnemonic.action) html += '<span class="hook-tag">🎬 ' + escapeHTML(mnemonic.action) + '</span>';
+      if (mnemonic.soundHook) html += '<span class="hook-tag">👂 ' + escapeHTML(mnemonic.soundHook) + '</span>';
+      if (mnemonic.feeling) html += '<span class="hook-tag">✋ ' + escapeHTML(mnemonic.feeling) + '</span>';
+      html += '</div>';
     }
 
     html += `<div style="font-size:13px; color:var(--dim)" class="mt-12 mb-12">${t("testRemembered")}</div>`;
@@ -2279,11 +2464,9 @@ function revealTestAnswer() {
 function answerTest(knewIt) {
   const word = testQueue[testIndex];
   if (word) {
-    if (!appData.stats[word.id]) appData.stats[word.id] = { yes: 0, no: 0 };
-    appData.stats[word.id][knewIt ? "yes" : "no"]++;
+    recordStrength(word.id, knewIt ? 2 : 1);
   }
   testScore[knewIt ? "yes" : "no"]++;
-  saveData();
 
   if (testIndex + 1 < testQueue.length) {
     testIndex++;
