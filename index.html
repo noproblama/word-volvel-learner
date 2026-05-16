@@ -1169,7 +1169,6 @@ function drawWheel() {
   const ARC_SEGMENT = 360 / arcCount;
   const WORD_SEGMENT = 360 / wordCount;
 
-  // Size the container and SVG
   const container = document.getElementById("wheel-container");
   container.style.width = SIZE + "px";
   container.style.height = SIZE + "px";
@@ -1179,85 +1178,76 @@ function drawWheel() {
   svg.setAttribute("height", SIZE);
   svg.setAttribute("viewBox", `0 0 ${SIZE} ${SIZE}`);
 
-  // Note: spin animation is handled by spinWheel() directly on DOM elements.
-  // drawWheel() always renders the static (final) state.
+  // Pie-slice path between two radii
+  function pie(r1, r2, sDeg, eDeg) {
+    const a1 = (sDeg - 90) * Math.PI / 180, a2 = (eDeg - 90) * Math.PI / 180;
+    const x1 = CENTER + r1*Math.cos(a1), y1 = CENTER + r1*Math.sin(a1);
+    const x2 = CENTER + r2*Math.cos(a1), y2 = CENTER + r2*Math.sin(a1);
+    const x3 = CENTER + r2*Math.cos(a2), y3 = CENTER + r2*Math.sin(a2);
+    const x4 = CENTER + r1*Math.cos(a2), y4 = CENTER + r1*Math.sin(a2);
+    const big = (eDeg - sDeg) > 180 ? 1 : 0;
+    return `M${x1},${y1}L${x2},${y2}A${r2},${r2} 0 ${big},1 ${x3},${y3}L${x4},${y4}A${r1},${r1} 0 ${big},0 ${x1},${y1}Z`;
+  }
+
+  const oc = ['rgba(42,125,110,0.14)','rgba(201,107,80,0.11)'];
+  const ic = ['rgba(184,146,46,0.10)','rgba(90,141,181,0.10)'];
+  const IB = INNER_RADIUS + SIZE * 0.04;
 
   let html = '';
 
-  // ── Outer ring (archetypes) ──
-  html += `<g id="outer-ring" class="wheel-ring" style="transform:rotate(${outerAngle}deg); transform-origin:${CENTER}px ${CENTER}px;">`;
-  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${OUTER_RADIUS}" fill="none" stroke="var(--border)" stroke-width="1.5"/>`;
-  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS + SIZE * 0.04}" fill="none" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,4"/>`;
+  // Defs
+  html += `<defs><filter id="ws"><feDropShadow dx="0" dy="1" stdDeviation="3" flood-opacity="0.08"/></filter>`;
+  html += `<radialGradient id="cg" cx="40%" cy="35%"><stop offset="0%" stop-color="#e8dcc0"/><stop offset="100%" stop-color="#b8a070"/></radialGradient></defs>`;
 
-  // Segment divider lines (roulette-style ticks)
+  // Outer background + shadow
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${OUTER_RADIUS}" fill="var(--card)" stroke="#c8bda0" stroke-width="2.5" filter="url(#ws)"/>`;
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${IB}" fill="none" stroke="#c8bda0" stroke-width="1.5"/>`;
+
+  // ── Outer ring ──
+  html += `<g id="outer-ring" class="wheel-ring" style="transform:rotate(${outerAngle}deg);transform-origin:${CENTER}px ${CENTER}px;">`;
   for (let i = 0; i < arcCount; i++) {
-    const divAngle = (i * ARC_SEGMENT - 90 - ARC_SEGMENT / 2) * Math.PI / 180;
-    const x1 = CENTER + (INNER_RADIUS + SIZE * 0.04) * Math.cos(divAngle);
-    const y1 = CENTER + (INNER_RADIUS + SIZE * 0.04) * Math.sin(divAngle);
-    const x2 = CENTER + OUTER_RADIUS * Math.cos(divAngle);
-    const y2 = CENTER + OUTER_RADIUS * Math.sin(divAngle);
-    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--border)" stroke-width="0.5" opacity="0.5"/>`;
+    html += `<path d="${pie(IB, OUTER_RADIUS, i*ARC_SEGMENT - ARC_SEGMENT/2, i*ARC_SEGMENT + ARC_SEGMENT/2)}" fill="${oc[i%2]}" stroke="#c8bda0" stroke-width="0.5"/>`;
   }
-
-  const arcFontSize = arcCount > 16 ? 14 : arcCount > 12 ? 17 : (SIZE >= 380 ? 24 : SIZE >= 340 ? 21 : 18);
-
+  const afs = arcCount > 16 ? 14 : arcCount > 12 ? 17 : (SIZE >= 380 ? 24 : SIZE >= 340 ? 21 : 18);
   for (let i = 0; i < arcCount; i++) {
-    const angle = (i * ARC_SEGMENT - 90) * Math.PI / 180;
-    const radius = (OUTER_RADIUS + INNER_RADIUS + SIZE * 0.04) / 2;
-    const x = CENTER + radius * Math.cos(angle);
-    const y = CENTER + radius * Math.sin(angle);
-    // Radial orientation: each item rotated so its bottom faces center
-    const radialDeg = i * ARC_SEGMENT;
-    html += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${arcFontSize}" transform="rotate(${radialDeg}, ${x}, ${y})">${archetypes[i].symbol}</text>`;
+    const a = (i * ARC_SEGMENT - 90) * Math.PI / 180, r = (OUTER_RADIUS + IB) / 2;
+    html += `<text x="${CENTER+r*Math.cos(a)}" y="${CENTER+r*Math.sin(a)}" text-anchor="middle" dominant-baseline="central" font-size="${afs}" transform="rotate(${i*ARC_SEGMENT},${CENTER+r*Math.cos(a)},${CENTER+r*Math.sin(a)})">${archetypes[i].symbol}</text>`;
   }
   html += '</g>';
 
-  // ── Inner ring (words) ──
-  html += `<g id="inner-ring" class="wheel-ring" style="transform:rotate(${innerAngle}deg); transform-origin:${CENTER}px ${CENTER}px;">`;
-  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS}" fill="var(--bg)" stroke="var(--border)" stroke-width="1.5"/>`;
-  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${CENTER_RADIUS}" fill="var(--card)" stroke="var(--border)" stroke-width=".5"/>`;
-
-  // Inner ring segment dividers
+  // ── Inner ring ──
+  html += `<g id="inner-ring" class="wheel-ring" style="transform:rotate(${innerAngle}deg);transform-origin:${CENTER}px ${CENTER}px;">`;
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RADIUS}" fill="var(--card)" stroke="#c8bda0" stroke-width="1.5"/>`;
   for (let i = 0; i < wordCount; i++) {
-    const divAngle = (i * WORD_SEGMENT - 90 - WORD_SEGMENT / 2) * Math.PI / 180;
-    const x1 = CENTER + CENTER_RADIUS * Math.cos(divAngle);
-    const y1 = CENTER + CENTER_RADIUS * Math.sin(divAngle);
-    const x2 = CENTER + INNER_RADIUS * Math.cos(divAngle);
-    const y2 = CENTER + INNER_RADIUS * Math.sin(divAngle);
-    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--border)" stroke-width="0.3" opacity="0.4"/>`;
+    html += `<path d="${pie(CENTER_RADIUS, INNER_RADIUS, i*WORD_SEGMENT - WORD_SEGMENT/2, i*WORD_SEGMENT + WORD_SEGMENT/2)}" fill="${ic[i%2]}" stroke="#d8cdb5" stroke-width="0.3"/>`;
   }
+  // Center ornament
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${CENTER_RADIUS}" fill="url(#cg)" stroke="#b8a070" stroke-width="1.5"/>`;
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${CENTER_RADIUS*0.5}" fill="none" stroke="#c8bda0" stroke-width="0.5"/>`;
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="2.5" fill="#8a7a50"/>`;
 
-  const maxLabelLength = wordCount > 16 ? 4 : wordCount > 10 ? 6 : wordCount > 6 ? 8 : 12;
-  const wordFontSize = SIZE >= 380
-    ? (wordCount > 16 ? 9 : wordCount > 10 ? 12 : 14)
-    : SIZE >= 340
-      ? (wordCount > 16 ? 8 : wordCount > 10 ? 11 : 13)
-      : (wordCount > 16 ? 7 : wordCount > 10 ? 9 : 11);
+  const ml = wordCount > 16 ? 4 : wordCount > 10 ? 6 : wordCount > 6 ? 8 : 12;
+  const wfs = SIZE >= 380 ? (wordCount>16?9:wordCount>10?12:14) : SIZE>=340 ? (wordCount>16?8:wordCount>10?11:13) : (wordCount>16?7:wordCount>10?9:11);
 
   wheelWords.forEach((word, i) => {
-    const angle = (i * WORD_SEGMENT - 90) * Math.PI / 180;
-    const radius = (INNER_RADIUS + CENTER_RADIUS) / 2;
-    const x = CENTER + radius * Math.cos(angle);
-    const y = CENTER + radius * Math.sin(angle);
-
-    const status = getWordStatus(word);
-    const color = status === 'new' ? 'var(--color-new)' : status === 'learning' ? 'var(--color-learning)' : 'var(--color-solid)';
-
-    const sourceLabel = word.source.length > maxLabelLength ? word.source.slice(0, maxLabelLength - 1) + '…' : word.source;
-    const targetLabel = word.target.length > maxLabelLength ? word.target.slice(0, maxLabelLength - 1) + '…' : word.target;
-
-    // Radial orientation: bottom faces center, like roulette
-    const radialDeg = i * WORD_SEGMENT;
-    const radialTransform = `transform="rotate(${radialDeg}, ${x}, ${y})"`;
-    html += `<text x="${x}" y="${y - 3}" text-anchor="middle" font-size="${wordFontSize}" fill="${color}" class="tibetan-font" ${radialTransform}>${sourceLabel}</text>`;
-    html += `<text x="${x}" y="${y + wordFontSize - 1}" text-anchor="middle" font-size="${Math.max(7, wordFontSize - 4)}" fill="var(--faint)" font-family="DM Sans,sans-serif" ${radialTransform}>${targetLabel}</text>`;
+    const a = (i*WORD_SEGMENT-90)*Math.PI/180, r = (INNER_RADIUS+CENTER_RADIUS)/2;
+    const x = CENTER+r*Math.cos(a), y = CENTER+r*Math.sin(a);
+    const st = getWordStatus(word);
+    const col = st==='new'?'var(--color-new)':st==='learning'?'var(--color-learning)':'var(--color-solid)';
+    const sl = word.source.length>ml ? word.source.slice(0,ml-1)+'…' : word.source;
+    const tl = word.target.length>ml ? word.target.slice(0,ml-1)+'…' : word.target;
+    const rd = i * WORD_SEGMENT;
+    html += `<text x="${x}" y="${y-3}" text-anchor="middle" font-size="${wfs}" fill="${col}" class="tibetan-font" font-weight="600" transform="rotate(${rd},${x},${y})">${sl}</text>`;
+    html += `<text x="${x}" y="${y+wfs-1}" text-anchor="middle" font-size="${Math.max(7,wfs-4)}" fill="var(--dim)" font-family="DM Sans,sans-serif" transform="rotate(${rd},${x},${y})">${tl}</text>`;
   });
   html += '</g>';
 
-  // ── Center dot and pointer ──
-  html += `<circle cx="${CENTER}" cy="${CENTER}" r="5" fill="var(--accent)" opacity=".4"/>`;
-  html += `<circle cx="${CENTER}" cy="${CENTER}" r="2" fill="var(--card)"/>`;
-  html += `<polygon id="wheel-pointer" points="${CENTER},${CENTER - OUTER_RADIUS + 5} ${CENTER - 5},${CENTER - OUTER_RADIUS - 7} ${CENTER + 5},${CENTER - OUTER_RADIUS - 7}" fill="var(--coral)" opacity=".75"/>`;
+  // ── Pointer ──
+  const pY = CENTER - OUTER_RADIUS;
+  html += `<g id="wheel-pointer"><polygon points="${CENTER},${pY+10} ${CENTER-7},${pY-6} ${CENTER+7},${pY-6}" fill="var(--coral)" stroke="#a05030" stroke-width="0.8"/><polygon points="${CENTER},${pY+10} ${CENTER-4},${pY-2} ${CENTER+4},${pY-2}" fill="#e8886a" opacity=".5"/></g>`;
+
+  // Outer rim
+  html += `<circle cx="${CENTER}" cy="${CENTER}" r="${OUTER_RADIUS+1}" fill="none" stroke="#b8a070" stroke-width="0.5" opacity="0.4"/>`;
 
   svg.innerHTML = html;
   setupWheelDrag();
