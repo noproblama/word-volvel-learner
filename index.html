@@ -481,6 +481,7 @@
       <input type="text" style="flex:1; min-width:70px" placeholder="Пошук…"
              id="words-search" oninput="renderWordList()">
       <button class="btn btn-small" onclick="exportAsText()">↓ txt</button>
+      <button class="btn btn-small" onclick="swapAllWords()" id="swap-all-btn" title="Swap source ↔ target">⇄</button>
     </div>
 
     <div class="card scrollable-list" id="word-list-container"></div>
@@ -542,12 +543,18 @@
    ══════════════════════════════════════════════════ */
 
 const DEFAULT_ARCHETYPES = [
-  { symbol: "🐉", name: "Дракон" },   { symbol: "🦅", name: "Орел" },
-  { symbol: "🌙", name: "Місяць" },    { symbol: "⚡", name: "Блискавка" },
-  { symbol: "🐺", name: "Вовк" },      { symbol: "🔥", name: "Полум'я" },
-  { symbol: "👁️", name: "Око" },      { symbol: "🗡️", name: "Меч" },
-  { symbol: "🌊", name: "Хвиля" },     { symbol: "🕸️", name: "Павутина" },
-  { symbol: "💀", name: "Череп" },      { symbol: "🌻", name: "Соняшник" },
+  { symbol: "🐉", name: { uk: "Дракон", en: "Dragon" } },
+  { symbol: "🦅", name: { uk: "Орел", en: "Eagle" } },
+  { symbol: "🌙", name: { uk: "Місяць", en: "Moon" } },
+  { symbol: "⚡", name: { uk: "Блискавка", en: "Lightning" } },
+  { symbol: "🐺", name: { uk: "Вовк", en: "Wolf" } },
+  { symbol: "🔥", name: { uk: "Полум'я", en: "Flame" } },
+  { symbol: "👁️", name: { uk: "Око", en: "Eye" } },
+  { symbol: "🗡️", name: { uk: "Меч", en: "Sword" } },
+  { symbol: "🌊", name: { uk: "Хвиля", en: "Wave" } },
+  { symbol: "🕸️", name: { uk: "Павутина", en: "Web" } },
+  { symbol: "💀", name: { uk: "Череп", en: "Skull" } },
+  { symbol: "🌻", name: { uk: "Соняшник", en: "Sunflower" } },
 ];
 
 const CATEGORY_COLORS = [
@@ -627,6 +634,7 @@ const TRANSLATIONS = {
     delete: "Видалити",
     navHelp: "?",
     importEnterHint: "Введіть хоча б одну пару \"слово — переклад\"",
+    swapConfirm: "Поміняти місцями слово ↔ переклад для ВСІХ слів?",
     helpContent: `
       <div class="help-section">
         <h3>🎯 Що це?</h3>
@@ -721,6 +729,7 @@ const TRANSLATIONS = {
     delete: "Delete",
     navHelp: "?",
     importEnterHint: "Enter at least one \"word — translation\" pair",
+    swapConfirm: "Swap word ↔ translation for ALL words?",
     helpContent: `
       <div class="help-section">
         <h3>🎯 What is this?</h3>
@@ -845,6 +854,7 @@ function applyTranslations() {
 
   // Re-render dynamic content
   updateStatsLine();
+  if (currentScreen === "wheel") { drawWheel(); renderArchetypeGrid(); }
   if (currentScreen === "words") renderWordList();
   if (currentScreen === "memory") renderMemoryList();
   if (currentScreen === "test") showTestSetup();
@@ -1005,8 +1015,18 @@ function getAllCategories() {
   return [...new Set(appData.words.map(w => w.category).filter(Boolean))];
 }
 
+function resolveArchetypeName(name) {
+  // Bilingual default: { uk: "...", en: "..." }
+  if (typeof name === 'object' && name !== null) {
+    return name[currentLang] || name.en || name.uk || '';
+  }
+  // Custom user string
+  return name || '';
+}
+
 function getArchetypes() {
-  return appData.archetypes || DEFAULT_ARCHETYPES;
+  const raw = appData.archetypes || DEFAULT_ARCHETYPES;
+  return raw.map(a => ({ symbol: a.symbol, name: resolveArchetypeName(a.name) }));
 }
 
 function escapeHTML(str) {
@@ -1584,7 +1604,7 @@ function saveArchetype(index) {
   if (!symbol || !name) return;
 
   if (!appData.archetypes) {
-    appData.archetypes = DEFAULT_ARCHETYPES.map(a => ({ symbol: a.symbol, name: a.name }));
+    appData.archetypes = DEFAULT_ARCHETYPES.map(a => ({ symbol: a.symbol, name: resolveArchetypeName(a.name) }));
   }
   appData.archetypes[index] = { symbol, name };
   saveData();
@@ -1595,7 +1615,7 @@ function saveArchetype(index) {
 
 function addArchetype() {
   if (!appData.archetypes) {
-    appData.archetypes = DEFAULT_ARCHETYPES.map(a => ({ symbol: a.symbol, name: a.name }));
+    appData.archetypes = DEFAULT_ARCHETYPES.map(a => ({ symbol: a.symbol, name: resolveArchetypeName(a.name) }));
   }
   appData.archetypes.push({ symbol: "❓", name: "Новий" });
   appData.archetypeCount = appData.archetypes.length;
@@ -1952,6 +1972,19 @@ function exportAsText() {
   link.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
   link.download = "tibetan_words.txt";
   link.click();
+}
+
+function swapAllWords() {
+  if (!appData.words.length) return;
+  if (!confirm(t("swapConfirm"))) return;
+
+  appData.words.forEach(word => {
+    const tmp = word.source;
+    word.source = word.target;
+    word.target = tmp;
+  });
+  saveData();
+  renderWordList();
 }
 
 
