@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вольвель Бруно</title>
+  <title>Word-Learning Volvel Bruno</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Serif+Tibetan:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -300,22 +300,37 @@
     }
     .test-filter-btn:disabled { opacity: .35; pointer-events: none; }
 
+    /* ── Inline word editing ── */
+    .word-display {
+      cursor: pointer; border-radius: 4px;
+      padding: 1px 4px; margin: -1px -4px;
+      transition: background .15s;
+    }
+    .word-display:hover { background: var(--accent-bg); }
+    .inline-edit {
+      display: flex; gap: 4px; align-items: center;
+      flex-wrap: wrap; width: 100%; margin: 4px 0;
+    }
+    .inline-edit input {
+      flex: 1; min-width: 60px; padding: 5px 8px; font-size: 12.5px;
+    }
+
     /* ── Language toggle (top-right) ── */
     .lang-toggle {
-      position: fixed; top: 12px; right: 12px; z-index: 100;
-      display: flex; border: 1.5px solid var(--border);
+      position: fixed; top: 10px; right: 10px; z-index: 100;
+      display: flex; flex-direction: column;
+      border: 1.5px solid var(--border);
       border-radius: 6px; overflow: hidden;
       background: var(--card); box-shadow: var(--shadow);
     }
     .lang-btn {
-      padding: 5px 10px; font-family: 'DM Sans', sans-serif;
-      font-size: 11px; font-weight: 500; border: 0;
-      background: transparent; color: var(--dim);
-      cursor: pointer; transition: .15s;
+      padding: 4px 5px; border: 0;
+      background: transparent; cursor: pointer;
+      transition: .15s; font-size: 16px; line-height: 1;
     }
-    .lang-btn:hover { color: var(--text); background: var(--bg2); }
-    .lang-btn.active { color: var(--accent); background: var(--accent-bg); font-weight: 600; }
-    .lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+    .lang-btn:hover { background: var(--bg2); }
+    .lang-btn.active { background: var(--accent-bg); }
+    .lang-btn + .lang-btn { border-top: 1px solid var(--border); }
 
     /* ── Help content ── */
     .help-section { margin-bottom: 20px; }
@@ -364,8 +379,8 @@
   <p class="subtitle" id="stats-line">—</p>
 
   <div class="lang-toggle" id="lang-toggle">
-    <button class="lang-btn" data-lang="uk" onclick="switchLanguage('uk')">🇺🇦 UA</button>
-    <button class="lang-btn" data-lang="en" onclick="switchLanguage('en')">🇬🇧 EN</button>
+    <button class="lang-btn" data-lang="uk" onclick="switchLanguage('uk')">🇺🇦</button>
+    <button class="lang-btn" data-lang="en" onclick="switchLanguage('en')">🇬🇧</button>
   </div>
 
   <div class="nav" id="main-nav">
@@ -1282,12 +1297,13 @@ function showWheelResult() {
     <span style="font-size:30px">${archetype.symbol}</span>
     <span style="font-size:15px; color:var(--dim); font-weight:600">${escapeHTML(archetype.name)}</span>
   </div>`;
-  html += `<div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${word.source}</div>`;
-  html += `<div style="font-size:16px; margin-bottom:6px"><span style="font-weight:700">${word.target}</span>`;
+  html += `<div id="wheel-word-edit" class="word-display" onclick="startInlineEdit('${wordId}', 'wheel-word-edit', showWheelResult)" style="display:inline-block; margin-bottom:6px">
+    <div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${word.source}</div>
+    <div style="font-size:16px"><span style="font-weight:700">${word.target}</span>`;
   if (word.category) {
     html += `<span class="category-tag" style="background:${catColor}15; color:${catColor}; border:1px solid ${catColor}25">${word.category}</span>`;
   }
-  html += '</div>';
+  html += '</div></div>';
   html += `<p class="hint mt-6">${t("wheelImagine")} <b>${archetype.symbol} ${escapeHTML(archetype.name)}</b> ${t("wheelWith")} «<b>${escapeHTML(word.target)}</b>».</p>`;
 
   // Existing mnemonic (view + edit)
@@ -1787,25 +1803,12 @@ function renderWordList() {
   if (!filtered.length) {
     html = `<p style="color:var(--faint); font-size:13px; text-align:center">${appData.words.length ? t("wordsNotFound") : t("wordsEmpty")}</p>`;
   } else {
-    filtered.forEach(word => {
-      const status = getWordStatus(word);
-      const catColor = getCategoryColor(word.category);
-      const statusClass = status === 'new' ? 'status-new' : status === 'learning' ? 'status-learning' : 'status-solid';
-
+    filtered.forEach((word, idx) => {
+      const editId = `wl-edit-${word.id}`;
       html += `<div class="word-row">
         <div style="flex:1; min-width:0; display:flex; align-items:center; gap:4px">
-          <span class="status-dot ${statusClass}"></span>
-          <span class="tibetan-font" style="font-size:13.5px">${word.source}</span>
-          <span style="color:var(--faint)">—</span>
-          <span style="font-size:13px">${word.target}</span>`;
-
-      if (appData.mnemonics[word.id]) {
-        html += '<span style="font-size:10px; color:var(--gold)">✦</span>';
-      }
-      if (word.category) {
-        html += `<span class="category-tag" style="background:${catColor}12; color:${catColor}; border:1px solid ${catColor}20">${word.category}</span>`;
-      }
-      html += `</div>
+          ${renderEditableWordPair(word, editId)}
+        </div>
         <button class="delete-button" onclick="deleteWord('${word.id}')">✕</button>
       </div>`;
     });
@@ -1822,6 +1825,85 @@ function deleteWord(wordId) {
   appData.memorized = appData.memorized.filter(id => id !== wordId);
   saveData();
   renderWordList();
+}
+
+/**
+ * Inline word editing — works in any context (wheel, words, memory).
+ * `containerId` is the DOM element ID to replace with edit fields.
+ * `afterSave` is a callback function name to re-render the view.
+ */
+let inlineEditingWordId = null;
+let inlineEditCallback = null;
+
+function startInlineEdit(wordId, containerId, afterSaveFn) {
+  const word = appData.words.find(w => w.id === wordId);
+  if (!word) return;
+  inlineEditingWordId = wordId;
+  inlineEditCallback = afterSaveFn;
+
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = `<div class="inline-edit">
+    <input type="text" id="inline-edit-target" value="${escapeHTML(word.target)}" placeholder="${t('wordsTranslation')}">
+    <input type="text" id="inline-edit-source" value="${escapeHTML(word.source)}" class="tibetan-font" placeholder="${t('wordsWord')}">
+    <button class="btn btn-small btn-primary" style="padding:4px 10px; font-size:11px" onclick="saveInlineEdit('${wordId}')">✓</button>
+    <button class="btn btn-small" style="padding:4px 8px; font-size:11px" onclick="cancelInlineEdit()">✕</button>
+  </div>`;
+
+  // Stop click from bubbling to parent onclick
+  container.querySelector('.inline-edit').addEventListener('click', e => e.stopPropagation());
+
+  document.getElementById("inline-edit-target").focus();
+
+  // Save on Enter, cancel on Escape
+  container.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); saveInlineEdit(wordId); }
+      if (e.key === "Escape") { cancelInlineEdit(); }
+    });
+  });
+}
+
+function saveInlineEdit(wordId) {
+  const word = appData.words.find(w => w.id === wordId);
+  if (!word) return;
+
+  const newSource = document.getElementById("inline-edit-source")?.value.trim();
+  const newTarget = document.getElementById("inline-edit-target")?.value.trim();
+
+  if (newSource) word.source = newSource;
+  if (newTarget) word.target = newTarget;
+
+  inlineEditingWordId = null;
+  saveData();
+  if (typeof inlineEditCallback === 'function') inlineEditCallback();
+}
+
+function cancelInlineEdit() {
+  inlineEditingWordId = null;
+  if (typeof inlineEditCallback === 'function') inlineEditCallback();
+}
+
+/** Returns clickable HTML for a word pair in word list. */
+function renderEditableWordPair(word, editContainerId) {
+  const catColor = getCategoryColor(word.category);
+  const status = getWordStatus(word);
+  const statusClass = status === 'new' ? 'status-new' : status === 'learning' ? 'status-learning' : 'status-solid';
+
+  let html = `<span id="${editContainerId}" class="word-display" onclick="startInlineEdit('${word.id}', '${editContainerId}', renderWordList)" style="display:inline-flex; align-items:center; gap:4px;">`;
+  html += `<span class="status-dot ${statusClass}"></span>`;
+  html += `<span class="tibetan-font" style="font-size:13.5px">${word.source}</span>`;
+  html += `<span style="color:var(--faint)">—</span>`;
+  html += `<span style="font-size:13px">${word.target}</span>`;
+  if (appData.mnemonics[word.id]) {
+    html += '<span style="font-size:10px; color:var(--gold)">✦</span>';
+  }
+  if (word.category) {
+    html += `<span class="category-tag" style="background:${catColor}12; color:${catColor}; border:1px solid ${catColor}20">${word.category}</span>`;
+  }
+  html += '</span>';
+  return html;
 }
 
 function exportAsText() {
@@ -1886,9 +1968,11 @@ function renderMemoryList() {
     html += `<div class="memory-row">
       <div class="toggle-switch ${isMemorized ? 'on' : ''}" onclick="toggleMemorized('${word.id}')"></div>
       <div style="flex:1; min-width:0; display:flex; align-items:center; gap:4px; flex-wrap:wrap">
-        <span class="tibetan-font" style="font-size:13.5px; ${isMemorized ? 'opacity:.4' : ''}">${word.source}</span>
-        <span style="color:var(--faint)">—</span>
-        <span style="font-size:13px; ${isMemorized ? 'opacity:.4' : ''}">${word.target}</span>`;
+        <span id="mem-edit-${word.id}" class="word-display" onclick="startInlineEdit('${word.id}', 'mem-edit-${word.id}', renderMemoryList)" style="display:inline-flex; align-items:center; gap:4px; ${isMemorized ? 'opacity:.4' : ''}">
+          <span class="tibetan-font" style="font-size:13.5px">${word.source}</span>
+          <span style="color:var(--faint)">—</span>
+          <span style="font-size:13px">${word.target}</span>
+        </span>`;
 
     if (word.category) {
       html += `<span class="category-tag" style="background:${catColor}12; color:${catColor}; border:1px solid ${catColor}20">${word.category}</span>`;
@@ -2082,7 +2166,9 @@ function renderTestCard() {
 
   let html = '<div class="card text-center">';
   html += `<div style="font-size:12px; color:var(--faint); letter-spacing:1px" class="mb-16">${testIndex + 1} / ${testQueue.length}</div>`;
-  html += `<div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${word.source}</div>`;
+  html += `<div id="test-word-edit" class="word-display" onclick="startInlineEdit('${word.id}', 'test-word-edit', renderTestCard)" style="display:inline-block">
+    <div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${word.source}</div>
+  </div>`;
 
   if (word.category) {
     html += `<div class="mt-8"><span class="category-tag" style="background:${catColor}12; color:${catColor}; border:1px solid ${catColor}20">${word.category}</span></div>`;
