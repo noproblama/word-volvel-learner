@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Word-Learning Volvel Bruno</title>
+  <title>Word Learner Volvel Bruno</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Serif+Tibetan:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -593,6 +593,9 @@ const TRANSLATIONS = {
     testTitle: "Що тестувати?",
     testAll: "Усі слова", testWithMnemonics: "✦ З мнемоніками",
     testByCategory: "За категорією:",
+    testDirection: "Режим:",
+    testDirSource: "Слово → Переклад",
+    testDirTarget: "Переклад → Слово",
     testAllLearned: "Усі вивчені! 🎉", testNoWords: "Немає слів.",
     testShow: "Показати", testRemembered: "Пам'ятав(ла)?",
     testYes: "Так ✓", testNo: "Ні ✗", testKnowForever: "✓✓ Знаю",
@@ -686,6 +689,9 @@ const TRANSLATIONS = {
     testTitle: "What to test?",
     testAll: "All words", testWithMnemonics: "✦ With mnemonics",
     testByCategory: "By category:",
+    testDirection: "Mode:",
+    testDirSource: "Word → Translation",
+    testDirTarget: "Translation → Word",
     testAllLearned: "All learned! 🎉", testNoWords: "No words.",
     testShow: "Reveal", testRemembered: "Did you remember?",
     testYes: "Yes ✓", testNo: "No ✗", testKnowForever: "✓✓ Know it",
@@ -2057,6 +2063,7 @@ let testIndex = 0;
 let testAnswerShown = false;
 let testScore = { yes: 0, no: 0 };
 let testFilter = "all";  // "all" | "with-mnemonics" | category name
+let testDirection = "source"; // "source" = show word, guess translation; "target" = show translation, guess word
 
 function showTestSetup() {
   navigateTo("test");
@@ -2066,6 +2073,18 @@ function showTestSetup() {
   const categories = getAllCategories();
 
   let html = '<div class="card">';
+
+  // Direction toggle
+  html += `<div class="label mb-8">${t("testDirection")}</div>`;
+  html += '<div class="test-filter-row mb-16">';
+  html += `<button class="test-filter-btn ${testDirection === 'source' ? 'active' : ''}" onclick="testDirection='source'; showTestSetup()">
+    ${t("testDirSource")}
+  </button>`;
+  html += `<button class="test-filter-btn ${testDirection === 'target' ? 'active' : ''}" onclick="testDirection='target'; showTestSetup()">
+    ${t("testDirTarget")}
+  </button>`;
+  html += '</div>';
+
   html += `<div class="label mb-12">${t("testTitle")}</div>`;
   html += '<div class="test-filter-row">';
 
@@ -2164,11 +2183,22 @@ function renderTestCard() {
   const mnemonic = appData.mnemonics[word.id];
   const catColor = getCategoryColor(word.category);
 
+  // Determine what to show vs reveal based on direction
+  const questionText = testDirection === "source" ? word.source : word.target;
+  const answerText = testDirection === "source" ? word.target : word.source;
+  const questionIsSource = testDirection === "source";
+
   let html = '<div class="card text-center">';
   html += `<div style="font-size:12px; color:var(--faint); letter-spacing:1px" class="mb-16">${testIndex + 1} / ${testQueue.length}</div>`;
-  html += `<div id="test-word-edit" class="word-display" onclick="startInlineEdit('${word.id}', 'test-word-edit', renderTestCard)" style="display:inline-block">
-    <div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${word.source}</div>
-  </div>`;
+
+  // Question (clickable to edit)
+  html += `<div id="test-word-edit" class="word-display" onclick="startInlineEdit('${word.id}', 'test-word-edit', renderTestCard)" style="display:inline-block">`;
+  if (questionIsSource) {
+    html += `<div class="tibetan-font" style="font-size:36px; color:var(--accent); line-height:1.5">${questionText}</div>`;
+  } else {
+    html += `<div style="font-size:28px; font-weight:700; color:var(--accent); line-height:1.4">${questionText}</div>`;
+  }
+  html += '</div>';
 
   if (word.category) {
     html += `<div class="mt-8"><span class="category-tag" style="background:${catColor}12; color:${catColor}; border:1px solid ${catColor}20">${word.category}</span></div>`;
@@ -2177,7 +2207,12 @@ function renderTestCard() {
   if (!testAnswerShown) {
     html += `<div class="mt-20"><button class="btn btn-primary" onclick="revealTestAnswer()">${t("testShow")}</button></div>`;
   } else {
-    html += `<div style="font-size:26px; font-weight:700; margin:16px 0">${word.target}</div>`;
+    // Answer
+    if (questionIsSource) {
+      html += `<div style="font-size:26px; font-weight:700; margin:16px 0">${answerText}</div>`;
+    } else {
+      html += `<div class="tibetan-font" style="font-size:30px; color:var(--accent); margin:16px 0">${answerText}</div>`;
+    }
 
     if (mnemonic) {
       html += `<div class="mnemonic-box" style="text-align:left">
