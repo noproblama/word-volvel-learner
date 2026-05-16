@@ -1290,9 +1290,6 @@ function spinWheel() {
   innerRing.style.transform = `rotate(${targetInner}deg)`;
   innerRing.style.transformOrigin = `${CENTER}px ${CENTER}px`;
 
-  // Add bounce class to pointer
-  document.getElementById("wheel-pointer")?.classList.add("pointer-bounce");
-
   // Update stored angles to final values
   outerAngle = targetOuter;
   innerAngle = targetInner;
@@ -1301,7 +1298,6 @@ function spinWheel() {
     isSpinning = false;
     button.disabled = false;
     button.textContent = "Крутити";
-    document.getElementById("wheel-pointer")?.classList.remove("pointer-bounce");
     // Redraw at final position (applies counter-rotations for horizontal text)
     drawWheel();
     showWheelResult();
